@@ -9,17 +9,20 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
-
 model Product {
-  id        String   @id @default(uuid())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   name      String
   description String?
   imageUrl String[]
   price     Int
+  stock     Int
+  category String
+  Size String
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -27,7 +30,7 @@ model Product {
 }
 
 model User {
-  id String @id @default(uuid())
+  id String @id @default(auto()) @map("_id") @db.ObjectId
   googleId String @unique @map("google_id")
   email String @unique
   emailVerified Boolean @default(false) @map("email_verified")
@@ -36,18 +39,18 @@ model User {
   picture String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  session Session[]
+  sessionIds String[] @db.ObjectId
+  sessions Session[] @relation(fields: [sessionIds], references: [id])
 
   @@map("users")
 }
 
 model Session {
-  id String @id @default(uuid())
+  id String @id @default(auto()) @map("_id") @db.ObjectId
   sess Json
   expire    DateTime
-  userId    String?     @map("user_id")
-  user      User?    @relation(fields: [userId], references: [id])
+  userIds   String[] @db.ObjectId
+  users     User[]   @relation(fields: [userIds], references: [id])
 
   @@map("sessions")
 }
-
