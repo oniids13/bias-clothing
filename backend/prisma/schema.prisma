@@ -18,11 +18,16 @@ model Product {
   name      String
   description String?
   imageUrl String[]
-  price     Int
-  stock     Int
+  price     Float
   category String
-  Size String
-  
+  slug String @unique
+  isActive Boolean @default(true)
+  isFeatured Boolean @default(false)
+
+  variants    ProductVariant[]
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -30,27 +35,170 @@ model Product {
 }
 
 model User {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
-  googleId String @unique @map("google_id")
-  email String @unique
-  emailVerified Boolean @default(false) @map("email_verified")
-  firstName String? @map("first_name")
-  lastName String? @map("last_name")
-  picture String?
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String   @unique
+  name      String?
+  avatar    String?  
+  googleId  String?  @unique // For Google OAuth
+  role      Role     @default(CUSTOMER)
+  phone     String?
+  
+
+  addresses Address[]
+  orders    Order[]
+  cart      CartItem[]
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  sessionIds String[] @db.ObjectId
-  sessions Session[] @relation(fields: [sessionIds], references: [id])
-
+  
   @@map("users")
 }
 
-model Session {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
-  sess Json
-  expire    DateTime
-  userIds   String[] @db.ObjectId
-  users     User[]   @relation(fields: [userIds], references: [id])
-
-  @@map("sessions")
+model Address {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  userId   String @db.ObjectId
+  
+  street   String
+  city     String
+  state    String
+  zipCode  String
+  country  String @default("Philippines")
+  
+  isDefault Boolean @default(false)
+  
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders   Order[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("addresses")
 }
+
+model ProductVariant {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  productId String @db.ObjectId
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size Size
+  color String
+  sku String @unique
+  stock Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([productId, size, color])
+  @@map("product_variants")
+  
+}
+
+model CartItem {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String @db.ObjectId
+  productId String @db.ObjectId
+  
+  size      Size
+  color     String
+  quantity  Int    @default(1)
+  
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([userId, productId, size, color])
+  @@map("cart_items")
+}
+
+model Order {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String @db.ObjectId
+  addressId String @db.ObjectId
+  
+  // Order details
+  orderNumber String      @unique // e.g., "ORD-2024-001"
+  status      OrderStatus @default(PENDING)
+  
+  // Pricing
+  subtotal    Float
+  shipping    Float       @default(0)
+  discount    Float       @default(0)
+  total       Float
+  
+  // Payment
+  paymentMethod   String? // e.g., "Credit Card", "PayPal", "COD"
+  paymentStatus   PaymentStatus @default(PENDING)
+  paymentIntentId String? // For Stripe or other payment processors
+  
+  // Shipping
+  trackingNumber String?
+  
+  // Notes
+  customerNotes String?
+  adminNotes    String?
+  
+  // Relationships
+  user       User        @relation(fields: [userId], references: [id])
+  address    Address     @relation(fields: [addressId], references: [id])
+  items      OrderItem[]
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@map("orders")
+}
+
+model OrderItem {
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  orderId String @db.ObjectId
+  
+  // Product snapshot (in case product changes later)
+  productId   String @db.ObjectId
+  productName String
+  size        Size
+  color       String
+  quantity    Int
+  unitPrice   Float
+  totalPrice  Float
+  
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+  
+  createdAt DateTime @default(now())
+  
+  @@map("order_items")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum Size {
+  XS
+  S
+  M
+  L
+  XL
+  XXL
+  XXXL
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
