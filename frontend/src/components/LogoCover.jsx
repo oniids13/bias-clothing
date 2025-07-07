@@ -1,3 +1,5 @@
+import Button from "./Button";
+
 const LogoCover = () => {
   return (
     <div className="logo-cover">
@@ -6,6 +8,7 @@ const LogoCover = () => {
         alt="logo cover"
         className="h-100 w-full object-fill"
       />
+      <Button />
     </div>
   );
 };

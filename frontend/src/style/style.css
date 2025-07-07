@@ -21,3 +21,20 @@ html {
   padding-bottom: 5%;
   flex: 1;
 }
+
+.logo-cover {
+  position: relative;
+}
+
+.btn-cover {
+  position: absolute;
+  top: 70%;
+  bottom: 0;
+  left: 45%;
+  right: 0;
+  text-align: center;
+  border: 3px solid #fff;
+  width: 10%;
+  height: 15%;
+  cursor: pointer;
+}
