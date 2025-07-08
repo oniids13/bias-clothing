@@ -3,6 +3,7 @@ import session from "express-session";
 import dotenv from "dotenv";
 import passport from "./middleware/passport.js";
 import authRoutes from "./router/auth.js";
+import cors from "cors";
 
 dotenv.config();
 
@@ -11,6 +12,12 @@ const app = express();
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL,
+    credentials: true,
+  })
+);
 
 // Session configuration
 app.use(

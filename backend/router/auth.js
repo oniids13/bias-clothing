@@ -25,7 +25,15 @@ router.post("/logout", (req, res) => {
     if (err) {
       return res.status(500).json({ error: "Logout failed" });
     }
-    res.json({ message: "Logged out successfully" });
+    // Clear the session completely
+    req.session.destroy((destroyErr) => {
+      if (destroyErr) {
+        console.error("Session destroy error:", destroyErr);
+      }
+      // Clear the session cookie
+      res.clearCookie("connect.sid"); // Default session cookie name
+      res.json({ message: "Logged out successfully" });
+    });
   });
 });
 
