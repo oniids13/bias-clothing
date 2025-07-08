@@ -35,7 +35,12 @@ const registerUser = [
       res.status(201).json({
         success: true,
         message: "User created successfully",
-        user: user,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
       });
     } catch (error) {
       res.status(500).json({
@@ -51,14 +56,36 @@ const registerUser = [
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await getUserLogin(email, password);
+    const result = await getUserLogin(email, password);
 
-    if (user.success) {
-      res.status(200).json(user);
+    if (result.success) {
+      // Log the user into the session using Passport
+      req.logIn(result.user, (err) => {
+        if (err) {
+          return res.status(500).json({
+            success: false,
+            message: "Session creation failed",
+            error: err.message,
+          });
+        }
+
+        // Return success response with user data
+        res.status(200).json({
+          success: true,
+          message: "Login successful",
+          user: {
+            id: result.user.id,
+            name: result.user.name,
+            email: result.user.email,
+            role: result.user.role,
+            avatar: result.user.avatar,
+          },
+        });
+      });
     } else {
       res.status(401).json({
         success: false,
-        message: user.message,
+        message: result.message,
       });
     }
   } catch (error) {

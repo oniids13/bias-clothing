@@ -1,6 +1,8 @@
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth2";
+import { Strategy as LocalStrategy } from "passport-local";
 import { PrismaClient } from "@prisma/client";
+import { validPassword } from "../utils/passwordUtil.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -141,6 +143,51 @@ passport.use(
       } catch (error) {
         console.error("Google OAuth Error:", error);
         return done(error, null);
+      }
+    }
+  )
+);
+
+// Local Strategy for email/password authentication
+passport.use(
+  "local",
+  new LocalStrategy(
+    {
+      usernameField: "email", // Use email instead of username
+      passwordField: "password",
+    },
+    async (email, password, done) => {
+      try {
+        // Find user by email
+        const user = await prisma.user.findUnique({
+          where: { email: email.toLowerCase() },
+        });
+
+        if (!user) {
+          return done(null, false, {
+            message: "No user found with this email",
+          });
+        }
+
+        // Check if user has local password (not Google-only user)
+        if (!user.hash || !user.salt) {
+          return done(null, false, {
+            message:
+              "This account uses Google login. Please sign in with Google.",
+          });
+        }
+
+        // Validate password
+        const isValidPassword = validPassword(password, user.hash, user.salt);
+
+        if (isValidPassword) {
+          return done(null, user);
+        } else {
+          return done(null, false, { message: "Incorrect password" });
+        }
+      } catch (error) {
+        console.error("Local authentication error:", error);
+        return done(error);
       }
     }
   )

@@ -12,6 +12,7 @@ const createUser = async (name, email, salt, hash) => {
         email,
         salt,
         hash,
+        role: "CUSTOMER", // Default role for locally registered users
       },
     });
     return user;
