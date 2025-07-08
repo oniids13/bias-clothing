@@ -2,8 +2,11 @@ import express from "express";
 import session from "express-session";
 import dotenv from "dotenv";
 import passport from "./middleware/passport.js";
-import authRoutes from "./router/auth.js";
 import cors from "cors";
+
+// routes
+import authRoutes from "./router/auth.js";
+import userRoutes from "./router/userRoute.js";
 
 dotenv.config();
 
@@ -38,6 +41,7 @@ app.use(passport.session());
 
 // Routes
 app.use("/auth", authRoutes);
+app.use("/api/user", userRoutes);
 
 // Basic route
 app.get("/", (req, res) => {
