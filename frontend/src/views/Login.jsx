@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
+import { useAuth } from "../App";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -10,6 +11,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { setUser } = useAuth();
 
   const handleGoogleLogin = () => {
     // Redirect to Google OAuth endpoint
@@ -34,7 +36,8 @@ const Login = () => {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Login successful - redirect to home page
+        // Login successful - update global user state and redirect
+        setUser(data.user);
         navigate("/");
       } else {
         // Login failed - show error message

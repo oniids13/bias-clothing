@@ -41,7 +41,7 @@ model User {
    hash String?
   salt String?
   avatar    String?  
-  googleId  String?  @unique // For Google OAuth
+  googleId  String? // For Google OAuth - we'll handle uniqueness in code
   role      Role     @default(CUSTOMER)
   phone     String?
   

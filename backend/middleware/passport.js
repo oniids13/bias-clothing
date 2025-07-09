@@ -31,7 +31,7 @@ passport.deserializeUser(async (id, done) => {
 async function findOrCreateUser(googleId, email, name, avatar) {
   try {
     // Try to find existing user by googleId first
-    let user = await prisma.user.findUnique({
+    let user = await prisma.user.findFirst({
       where: { googleId: googleId },
     });
 

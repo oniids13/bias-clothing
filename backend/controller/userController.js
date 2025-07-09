@@ -7,10 +7,18 @@ const emailErr = "must contain @ and ends with .com.";
 const passLength = "must be greater than 6 characters.";
 
 const validateUser = [
-  body("fullName")
+  body("firstName")
     .trim()
+    .notEmpty()
+    .withMessage("First name is required")
     .matches(/^[A-Za-z\s]+$/)
-    .withMessage(`Full name ${alphaErr}`),
+    .withMessage(`First name ${alphaErr}`),
+  body("lastName")
+    .trim()
+    .notEmpty()
+    .withMessage("Last name is required")
+    .matches(/^[A-Za-z\s]+$/)
+    .withMessage(`Last name ${alphaErr}`),
   body("email").trim().isEmail().withMessage(`Email ${emailErr}`),
   body("password")
     .trim()
@@ -23,6 +31,14 @@ const registerUser = [
   async (req, res) => {
     const errors = validationResult(req);
 
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors: errors,
+      });
+    }
+
     try {
       const { firstName, lastName, email, password } = req.body;
       const fullName = `${firstName} ${lastName}`;
@@ -32,15 +48,27 @@ const registerUser = [
 
       const user = await createUser(fullName, email, salt, hash);
 
-      res.status(201).json({
-        success: true,
-        message: "User created successfully",
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-        },
+      // Log the user into the session using Passport (same as login)
+      req.logIn(user, (err) => {
+        if (err) {
+          return res.status(500).json({
+            success: false,
+            message: "User created but session creation failed",
+            error: err.message,
+          });
+        }
+
+        // Return success response with user data
+        res.status(201).json({
+          success: true,
+          message: "User created and logged in successfully",
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+          },
+        });
       });
     } catch (error) {
       res.status(500).json({

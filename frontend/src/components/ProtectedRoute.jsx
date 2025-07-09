@@ -1,14 +1,20 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../App";
 
 const ProtectedRoute = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const { user, setUser } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    checkUserAuth();
-  }, []);
+    // Only check auth if we don't already have user data
+    if (!user) {
+      checkUserAuth();
+    } else {
+      setIsLoading(false);
+    }
+  }, [user]);
 
   const checkUserAuth = async () => {
     try {
