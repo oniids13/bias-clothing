@@ -81,8 +81,8 @@ const Header = ({ user, setUser }) => {
     }
   };
 
-  const googleLogin = () => {
-    window.location.href = "http://localhost:3000/auth/google";
+  const logInPage = () => {
+    navigate("/login");
   };
 
   const handleLogout = async () => {
@@ -154,11 +154,7 @@ const Header = ({ user, setUser }) => {
                 </button>
               </>
             ) : (
-              <button
-                onClick={googleLogin}
-                className="mr-4"
-                disabled={isLoading}
-              >
+              <button onClick={logInPage} className="mr-4" disabled={isLoading}>
                 <AccountCircleIcon />
               </button>
             )}

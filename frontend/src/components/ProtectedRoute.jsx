@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 const ProtectedRoute = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     checkUserAuth();
@@ -33,8 +35,8 @@ const ProtectedRoute = ({ children }) => {
     }
   };
 
-  const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:3000/auth/google";
+  const handleLogin = () => {
+    navigate("/login");
   };
 
   // Show loading spinner while checking authentication
@@ -76,10 +78,10 @@ const ProtectedRoute = ({ children }) => {
             You need to sign in to access this page.
           </p>
           <button
-            onClick={handleGoogleLogin}
+            onClick={handleLogin}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 ease-in-out transform hover:scale-105"
           >
-            Sign in with Google
+            Sign in
           </button>
         </div>
       </div>
