@@ -23,6 +23,7 @@ model Product {
   slug String @unique
   isActive Boolean @default(true)
   isFeatured Boolean @default(false)
+  isNew Boolean @default(true)
 
   variants    ProductVariant[]
   cartItems   CartItem[]

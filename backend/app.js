@@ -7,6 +7,7 @@ import cors from "cors";
 // routes
 import authRoutes from "./router/auth.js";
 import userRoutes from "./router/userRoute.js";
+import productRoutes from "./router/productRoute.js";
 
 dotenv.config();
 
@@ -42,6 +43,7 @@ app.use(passport.session());
 // Routes
 app.use("/auth", authRoutes);
 app.use("/api/user", userRoutes);
+app.use("/api/product", productRoutes);
 
 // Basic route
 app.get("/", (req, res) => {
