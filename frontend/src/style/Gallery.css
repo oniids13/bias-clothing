@@ -1,0 +1,107 @@
+/* Gallery Carousel Styles */
+.gallery-container {
+  position: relative;
+}
+
+.gallery-track {
+  display: flex;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.gallery-item {
+  flex-shrink: 0;
+  transform: translateZ(0); /* Enable hardware acceleration */
+}
+
+/* Smooth scrolling for touch devices */
+.gallery-container {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent image dragging */
+.gallery-item img {
+  user-select: none;
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+}
+
+/* Enhanced hover effects */
+.gallery-item:hover {
+  transform: translateY(-4px);
+  transition: transform 0.3s ease;
+}
+
+/* Loading animation for images */
+.gallery-item img {
+  opacity: 0;
+  animation: fadeInImage 0.5s ease-in-out forwards;
+}
+
+@keyframes fadeInImage {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Custom scrollbar for webkit browsers */
+.gallery-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Focus styles for better accessibility */
+.gallery-item:focus-within {
+  outline: 2px solid #3b82f6;
+  outline-offset: 4px;
+  border-radius: 16px;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .gallery-track,
+  .gallery-item,
+  .gallery-item img {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .gallery-item img {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Enhanced mobile touch experience */
+@media (max-width: 768px) {
+  .gallery-container {
+    touch-action: pan-x;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+  }
+}
+
+/* Print styles */
+@media print {
+  .gallery-container {
+    overflow: visible;
+  }
+
+  .gallery-track {
+    transform: none !important;
+    width: auto !important;
+    flex-wrap: wrap;
+  }
+
+  .gallery-item {
+    width: 33.333% !important;
+    page-break-inside: avoid;
+  }
+}
