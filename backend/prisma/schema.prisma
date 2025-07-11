@@ -172,6 +172,15 @@ model OrderItem {
   @@map("order_items")
 }
 
+
+model Gallery {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  imageUrl String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+}
+
 enum Role {
   CUSTOMER
   ADMIN
