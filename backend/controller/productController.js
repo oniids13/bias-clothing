@@ -4,13 +4,21 @@ import {
   getNewProducts,
 } from "../model/productQueries.js";
 
-const getAllProductsController = async (req, res) => {
+const getActiveProductsController = async (req, res) => {
   try {
     const products = await getAllProducts();
     const activeProducts = products.filter((product) => product.isActive);
+    res.status(200).json(activeProducts);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching products" });
+  }
+};
+
+const getInactiveProductsController = async (req, res) => {
+  try {
+    const products = await getAllProducts();
     const inactiveProducts = products.filter((product) => !product.isActive);
-    const allProducts = [...activeProducts, ...inactiveProducts];
-    res.status(200).json(allProducts);
+    res.status(200).json(inactiveProducts);
   } catch (error) {
     res.status(500).json({ message: "Error fetching products" });
   }
@@ -34,7 +42,8 @@ const getNewProductsController = async (req, res) => {
 };
 
 export {
-  getAllProductsController,
+  getActiveProductsController,
+  getInactiveProductsController,
   getFeaturedProductsController,
   getNewProductsController,
 };

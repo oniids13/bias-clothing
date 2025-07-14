@@ -1,13 +1,15 @@
 import { Router } from "express";
 import {
-  getAllProductsController,
+  getActiveProductsController,
+  getInactiveProductsController,
   getFeaturedProductsController,
   getNewProductsController,
 } from "../controller/productController.js";
 
 const productRouter = Router();
 
-productRouter.get("/all", getAllProductsController);
+productRouter.get("/active", getActiveProductsController);
+productRouter.get("/inactive", getInactiveProductsController);
 productRouter.get("/featured", getFeaturedProductsController);
 productRouter.get("/new", getNewProductsController);
 

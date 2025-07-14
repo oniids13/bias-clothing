@@ -1,5 +1,11 @@
+import Display from "../sections/Display";
+
 const Shop = () => {
-  return <div>Shop</div>;
+  return (
+    <>
+      <Display title="All Products" endpoint="all" />
+    </>
+  );
 };
 
 export default Shop;
