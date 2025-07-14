@@ -23,9 +23,9 @@ const ProductCard = ({ product }) => {
             loading="lazy"
           />
           {!isActive && (
-            <h3 className="absolute top-10 left-10 text-white text-sm font-bold bg-black bg-opacity-50 p-2 rounded-br-2xl">
+            <h2 className="absolute top-10 left-10 text-white text-base font-bold bg-black bg-opacity-50 p-2 rounded-br-2xl">
               Out of Stock
-            </h3>
+            </h2>
           )}
         </div>
 
@@ -36,11 +36,15 @@ const ProductCard = ({ product }) => {
               display: "-webkit-box",
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",
+              textDecoration: !isActive ? "line-through" : "none",
             }}
           >
             {name}
           </h3>
-          <div className="text-base md:text-lg font-bold text-red-600 m-0">
+          <div
+            className="text-base md:text-lg font-bold text-red-600 m-0"
+            style={{ textDecoration: !isActive ? "line-through" : "none" }}
+          >
             {formatPrice(price)}
           </div>
         </div>
