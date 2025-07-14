@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 const ProductCard = ({ product }) => {
-  const { name, price, imageUrl, slug } = product;
+  const { name, price, imageUrl, slug, isActive } = product;
 
   // Format price to display with proper currency
   const formatPrice = (price) => {
@@ -22,6 +22,11 @@ const ProductCard = ({ product }) => {
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
           />
+          {!isActive && (
+            <h3 className="absolute top-10 left-10 text-white text-sm font-bold bg-black bg-opacity-50 p-2 rounded-br-2xl">
+              Out of Stock
+            </h3>
+          )}
         </div>
 
         <div className="flex-1 px-4 py-4 md:px-5 md:py-6 flex flex-col justify-center gap-2">

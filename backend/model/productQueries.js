@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 
 const getAllProducts = async () => {
   try {
-    const products = await prisma.product.findMany();
+    const products = await prisma.product.findMany({});
     return products;
   } catch (error) {
     console.error("Error fetching products:", error);
@@ -15,7 +15,10 @@ const getAllProducts = async () => {
 const getFeaturedProducts = async () => {
   try {
     const products = await prisma.product.findMany({
-      where: { isFeatured: true },
+      where: {
+        isFeatured: true,
+        isActive: true,
+      },
     });
     return products;
   } catch (error) {
@@ -27,7 +30,10 @@ const getFeaturedProducts = async () => {
 const getNewProducts = async () => {
   try {
     const products = await prisma.product.findMany({
-      where: { isNew: true },
+      where: {
+        isNew: true,
+        isActive: true,
+      },
     });
     return products;
   } catch (error) {
