@@ -42,10 +42,10 @@ const getNewProducts = async () => {
   }
 };
 
-const getSingleProduct = async (id) => {
+const getSingleProduct = async (slug) => {
   try {
     const product = await prisma.product.findUnique({
-      where: { id },
+      where: { slug },
     });
     return product;
   } catch (error) {

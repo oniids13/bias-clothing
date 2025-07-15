@@ -44,7 +44,7 @@ const getNewProductsController = async (req, res) => {
 
 const getSingleProductController = async (req, res) => {
   try {
-    const product = await getSingleProduct(req.params.id);
+    const product = await getSingleProduct(req.params.slug);
     res.status(200).json(product);
   } catch (error) {
     res.status(500).json({ message: "Error fetching single product" });
