@@ -2,6 +2,7 @@ import {
   getAllProducts,
   getFeaturedProducts,
   getNewProducts,
+  getSingleProduct,
 } from "../model/productQueries.js";
 
 const getActiveProductsController = async (req, res) => {
@@ -41,9 +42,19 @@ const getNewProductsController = async (req, res) => {
   }
 };
 
+const getSingleProductController = async (req, res) => {
+  try {
+    const product = await getSingleProduct(req.params.id);
+    res.status(200).json(product);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching single product" });
+  }
+};
+
 export {
   getActiveProductsController,
   getInactiveProductsController,
   getFeaturedProductsController,
   getNewProductsController,
+  getSingleProductController,
 };

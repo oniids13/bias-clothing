@@ -42,4 +42,21 @@ const getNewProducts = async () => {
   }
 };
 
-export { getAllProducts, getFeaturedProducts, getNewProducts };
+const getSingleProduct = async (id) => {
+  try {
+    const product = await prisma.product.findUnique({
+      where: { id },
+    });
+    return product;
+  } catch (error) {
+    console.error("Error fetching single product:", error);
+    throw error;
+  }
+};
+
+export {
+  getAllProducts,
+  getFeaturedProducts,
+  getNewProducts,
+  getSingleProduct,
+};
