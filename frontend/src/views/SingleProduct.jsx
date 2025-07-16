@@ -2,11 +2,15 @@ import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 import ProductImageGallery from "../components/ProductImageGallery";
+import ProductDetails from "../components/ProductDetails";
+import Recommendation from "../sections/Recommendation";
 
 const SingleProduct = () => {
   const { slug } = useParams();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedSize, setSelectedSize] = useState(null);
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -16,7 +20,6 @@ const SingleProduct = () => {
         );
         const data = await response.json();
         setProduct(data);
-        console.log(data);
       } catch (error) {
         console.error("Error fetching product:", error);
       } finally {
@@ -25,6 +28,27 @@ const SingleProduct = () => {
     };
     fetchProduct();
   }, [slug]);
+
+  const handleSizeClick = (size) => {
+    setSelectedSize(size);
+  };
+
+  const handleQuantityChange = (change) => {
+    setQuantity((prev) => Math.max(1, prev + change));
+  };
+
+  const handleAddToCart = () => {
+    if (!selectedSize) {
+      alert("Please select a size first");
+      return;
+    }
+    // Add to cart logic here
+    console.log("Adding to cart:", {
+      product: product.name,
+      size: selectedSize,
+      quantity,
+    });
+  };
 
   if (loading) {
     return (
@@ -50,39 +74,22 @@ const SingleProduct = () => {
           <ProductImageGallery
             images={product.imageUrl}
             productName={product.name}
+            isOutOfStock={!product.isActive}
           />
         </div>
 
         {/* Product Details */}
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-4">
-            {product.name}
-          </h1>
-          <p className="text-2xl font-semibold text-red-600 mb-4">
-            ₱
-            {product.price.toLocaleString("en-PH", {
-              minimumFractionDigits: 2,
-            })}
-          </p>
-          {product.description && (
-            <p className="text-gray-600 mb-6">{product.description}</p>
-          )}
-          <div className="space-y-4">
-            <div>
-              <span className="font-semibold">Category: </span>
-              <span className="text-gray-600">{product.category}</span>
-            </div>
-            <div>
-              <span className="font-semibold">Status: </span>
-              <span
-                className={product.isActive ? "text-green-600" : "text-red-600"}
-              >
-                {product.isActive ? "In Stock" : "Out of Stock"}
-              </span>
-            </div>
-          </div>
-        </div>
+        <ProductDetails
+          product={product}
+          selectedSize={selectedSize}
+          quantity={quantity}
+          handleSizeClick={handleSizeClick}
+          handleQuantityChange={handleQuantityChange}
+          handleAddToCart={handleAddToCart}
+        />
       </div>
+      {/* Recommendation */}
+      <Recommendation />
     </div>
   );
 };

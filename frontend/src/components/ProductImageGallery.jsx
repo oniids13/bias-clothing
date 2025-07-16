@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const ProductImageGallery = ({ images, productName }) => {
+const ProductImageGallery = ({ images, productName, isOutOfStock = false }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const handlePrevious = () => {
@@ -31,9 +31,20 @@ const ProductImageGallery = ({ images, productName }) => {
           <img
             src={images[currentImageIndex]}
             alt={`${productName} - Image ${currentImageIndex + 1}`}
-            className="w-full h-full object-cover"
+            className={`w-full h-full object-cover ${
+              isOutOfStock ? "opacity-70" : ""
+            }`}
           />
         </div>
+
+        {/* Out of Stock Overlay */}
+        {isOutOfStock && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="bg-red-600 text-white px-6 py-3 rounded-lg font-bold text-xl shadow-2xl transform rotate-12 border-2 border-white">
+              OUT OF STOCK
+            </div>
+          </div>
+        )}
 
         {/* Navigation Arrows */}
         {images.length > 1 && (
@@ -106,7 +117,9 @@ const ProductImageGallery = ({ images, productName }) => {
               <img
                 src={image}
                 alt={`${productName} thumbnail ${index + 1}`}
-                className="w-full h-full object-cover"
+                className={`w-full h-full object-cover ${
+                  isOutOfStock ? "opacity-60" : ""
+                }`}
               />
             </button>
           ))}
