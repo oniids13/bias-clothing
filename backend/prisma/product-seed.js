@@ -26,6 +26,12 @@ const products = [
       { size: "XXL", color: "Black", stock: 25 },
       { size: "XXXL", color: "Black", stock: 18 },
     ],
+    details: [
+      "100% Cotton",
+      "Comfortable fit",
+      "Machine washable",
+      "Made in PH",
+    ],
   },
   {
     name: "Bias T-shirt White",
@@ -49,6 +55,12 @@ const products = [
       { size: "XXL", color: "White", stock: 15 },
       { size: "XXXL", color: "White", stock: 14 },
     ],
+    details: [
+      "100% Cotton",
+      "Cotton shirt with a relaxed fit",
+      "Machine washable",
+      "Made in PH",
+    ],
   },
   {
     name: "Bias Shirt Sunrise",
@@ -68,6 +80,12 @@ const products = [
       { size: "XL", color: "Skyblue", stock: 12 },
       { size: "XXL", color: "Skyblue", stock: 15 },
       { size: "XXXL", color: "Skyblue", stock: 14 },
+    ],
+    details: [
+      "100% Cotton",
+      "Silkscreen printed design",
+      "Machine washable",
+      "Made in PH",
     ],
   },
 ];
