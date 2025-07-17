@@ -1,13 +1,82 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 const ProductDetails = ({
   product,
   selectedSize,
+  selectedColor,
   quantity,
+  currentStock,
+  availableColors,
+  availableSizes,
+  addingToCart,
+  addToCartMessage,
+  user,
   handleSizeClick,
+  handleColorClick,
   handleQuantityChange,
   handleAddToCart,
 }) => {
+  const navigate = useNavigate();
+
+  // Get sizes that are available for the selected color
+  const getSizesForColor = (color) => {
+    if (!product.variants || !color) return [];
+    return product.variants
+      .filter((v) => v.color === color && v.stock > 0)
+      .map((v) => v.size);
+  };
+
+  // Get colors that are available for the selected size
+  const getColorsForSize = (size) => {
+    if (!product.variants || !size) return [];
+    return product.variants
+      .filter((v) => v.size === size && v.stock > 0)
+      .map((v) => v.color);
+  };
+
+  // Check if a size is available for the selected color
+  const isSizeAvailable = (size) => {
+    if (!selectedColor) return availableSizes.includes(size);
+    return getSizesForColor(selectedColor).includes(size);
+  };
+
+  // Check if a color is available for the selected size
+  const isColorAvailable = (color) => {
+    if (!selectedSize) return availableColors.includes(color);
+    return getColorsForSize(selectedSize).includes(color);
+  };
+
+  const handleLoginRedirect = () => {
+    navigate("/login");
+  };
+
+  const getButtonText = () => {
+    if (addingToCart) return "Adding...";
+    if (!product.isActive) return "Out of Stock";
+    if (!user) return "Login to Add to Cart";
+    if (!selectedSize) return "Select Size";
+    if (!selectedColor) return "Select Color";
+    if (currentStock === 0) return "Out of Stock";
+    return "Add to Cart";
+  };
+
+  const isButtonDisabled = () => {
+    return (
+      !product.isActive ||
+      addingToCart ||
+      (user && (!selectedSize || !selectedColor || currentStock === 0))
+    );
+  };
+
+  const handleButtonClick = () => {
+    if (!user) {
+      handleLoginRedirect();
+    } else {
+      handleAddToCart();
+    }
+  };
+
   return (
     <div>
       <h1 className="text-3xl font-bold text-gray-800 mb-4">{product.name}</h1>
@@ -44,159 +113,179 @@ const ProductDetails = ({
             {product.isActive ? "In Stock" : "Out of Stock"}
           </span>
         </div>
-      </div>
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-4">
-          <p>Size: {selectedSize}</p>
-          <div className="grid grid-cols-7 w-fit">
-            <button
-              onClick={() => product.isActive && handleSizeClick("XS")}
-              disabled={!product.isActive}
-              className={`w-12 h-12 border border-gray-300 transition-colors duration-200 flex items-center justify-center text-sm font-medium ${
-                !product.isActive
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : selectedSize === "XS"
-                  ? "bg-black text-white border-black"
-                  : "bg-white hover:bg-gray-100 text-gray-700 hover:text-gray-900"
-              }`}
-            >
-              XS
-            </button>
-            <button
-              onClick={() => product.isActive && handleSizeClick("S")}
-              disabled={!product.isActive}
-              className={`w-12 h-12 border border-gray-300 transition-colors duration-200 flex items-center justify-center text-sm font-medium -ml-px ${
-                !product.isActive
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : selectedSize === "S"
-                  ? "bg-black text-white border-black"
-                  : "bg-white hover:bg-gray-100 text-gray-700 hover:text-gray-900"
-              }`}
-            >
-              S
-            </button>
-            <button
-              onClick={() => product.isActive && handleSizeClick("M")}
-              disabled={!product.isActive}
-              className={`w-12 h-12 border border-gray-300 transition-colors duration-200 flex items-center justify-center text-sm font-medium -ml-px ${
-                !product.isActive
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : selectedSize === "M"
-                  ? "bg-black text-white border-black"
-                  : "bg-white hover:bg-gray-100 text-gray-700 hover:text-gray-900"
-              }`}
-            >
-              M
-            </button>
-            <button
-              onClick={() => product.isActive && handleSizeClick("L")}
-              disabled={!product.isActive}
-              className={`w-12 h-12 border border-gray-300 transition-colors duration-200 flex items-center justify-center text-sm font-medium -ml-px ${
-                !product.isActive
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : selectedSize === "L"
-                  ? "bg-black text-white border-black"
-                  : "bg-white hover:bg-gray-100 text-gray-700 hover:text-gray-900"
-              }`}
-            >
-              L
-            </button>
-            <button
-              onClick={() => product.isActive && handleSizeClick("XL")}
-              disabled={!product.isActive}
-              className={`w-12 h-12 border border-gray-300 transition-colors duration-200 flex items-center justify-center text-sm font-medium -mt-px ${
-                !product.isActive
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : selectedSize === "XL"
-                  ? "bg-black text-white border-black"
-                  : "bg-white hover:bg-gray-100 text-gray-700 hover:text-gray-900"
-              }`}
-            >
-              XL
-            </button>
-            <button
-              onClick={() => product.isActive && handleSizeClick("XXL")}
-              disabled={!product.isActive}
-              className={`w-12 h-12 border border-gray-300 transition-colors duration-200 flex items-center justify-center text-sm font-medium -ml-px -mt-px ${
-                !product.isActive
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : selectedSize === "XXL"
-                  ? "bg-black text-white border-black"
-                  : "bg-white hover:bg-gray-100 text-gray-700 hover:text-gray-900"
-              }`}
-            >
-              XXL
-            </button>
-            <button
-              onClick={() => product.isActive && handleSizeClick("XXXL")}
-              disabled={!product.isActive}
-              className={`w-12 h-12 border border-gray-300 transition-colors duration-200 flex items-center justify-center text-xs font-medium -ml-px -mt-px ${
-                !product.isActive
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : selectedSize === "XXXL"
-                  ? "bg-black text-white border-black"
-                  : "bg-white hover:bg-gray-100 text-gray-700 hover:text-gray-900"
-              }`}
-            >
-              XXXL
-            </button>
+
+        {/* User status indicator */}
+        {!user && (
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <span className="text-sm text-blue-800">
+              Please{" "}
+              <button
+                onClick={handleLoginRedirect}
+                className="font-semibold underline hover:text-blue-600"
+              >
+                login
+              </button>{" "}
+              to add items to cart
+            </span>
           </div>
-          <div className="flex items-center gap-4 mt-4">
-            <div className="flex items-center">
-              <span
-                className={`text-sm font-medium mr-3 ${
-                  product.isActive ? "text-gray-700" : "text-gray-400"
+        )}
+      </div>
+
+      {/* Color Selection */}
+      <div className="mt-6">
+        <h3 className="text-lg font-semibold mb-3">
+          Color:{" "}
+          {selectedColor && (
+            <span className="text-gray-600">({selectedColor})</span>
+          )}
+        </h3>
+        <div className="flex flex-wrap gap-2">
+          {availableColors.map((color) => {
+            const isAvailable = isColorAvailable(color);
+            const isSelected = selectedColor === color;
+
+            return (
+              <button
+                key={color}
+                onClick={() => isAvailable && handleColorClick(color)}
+                disabled={!isAvailable}
+                className={`px-4 py-2 rounded-lg border transition-all duration-200 ${
+                  !isAvailable
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300"
+                    : isSelected
+                    ? "bg-black text-white border-black"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
                 }`}
               >
-                Quantity:
-              </span>
-              <div className="flex items-center border border-gray-300 rounded">
-                <button
-                  onClick={() => product.isActive && handleQuantityChange(-1)}
-                  className={`w-10 h-10 flex items-center justify-center transition-colors duration-200 ${
-                    !product.isActive
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-white text-gray-600 hover:bg-gray-100"
-                  }`}
-                  disabled={!product.isActive || quantity <= 1}
-                >
-                  -
-                </button>
-                <span
-                  className={`w-12 h-10 flex items-center justify-center border-x border-gray-300 font-medium ${
-                    product.isActive
-                      ? "bg-gray-100 text-gray-800"
-                      : "bg-gray-50 text-gray-400"
-                  }`}
-                >
-                  {quantity}
-                </span>
-                <button
-                  onClick={() => product.isActive && handleQuantityChange(1)}
-                  className={`w-10 h-10 flex items-center justify-center transition-colors duration-200 ${
-                    !product.isActive
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-white text-gray-600 hover:bg-gray-100"
-                  }`}
-                  disabled={!product.isActive}
-                >
-                  +
-                </button>
-              </div>
-            </div>
-            <button
-              onClick={product.isActive ? handleAddToCart : undefined}
-              disabled={!product.isActive}
-              className={`px-6 py-2 rounded font-medium transition-colors duration-200 ${
-                product.isActive
-                  ? "bg-black text-white hover:bg-gray-800"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                {color}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Stock Display - shown below color selection */}
+        {selectedColor && selectedSize && (
+          <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+            <span className="text-sm font-medium text-gray-700">
+              Stock Available:{" "}
+            </span>
+            <span
+              className={`font-semibold ${
+                currentStock > 10
+                  ? "text-green-600"
+                  : currentStock > 5
+                  ? "text-yellow-600"
+                  : currentStock > 0
+                  ? "text-orange-600"
+                  : "text-red-600"
               }`}
             >
-              {product.isActive ? "Add to Cart" : "Out of Stock"}
+              {currentStock} {currentStock === 1 ? "item" : "items"}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Size Selection */}
+      <div className="flex items-center justify-between mt-6">
+        <div className="flex flex-col gap-4">
+          <h3 className="text-lg font-semibold">
+            Size:{" "}
+            {selectedSize && (
+              <span className="text-gray-600">({selectedSize})</span>
+            )}
+          </h3>
+          <div className="grid grid-cols-7 w-fit gap-0">
+            {["XS", "S", "M", "L", "XL", "XXL", "XXXL"].map((size) => {
+              const isAvailable = isSizeAvailable(size);
+              const isSelected = selectedSize === size;
+
+              return (
+                <button
+                  key={size}
+                  onClick={() => isAvailable && handleSizeClick(size)}
+                  disabled={!isAvailable}
+                  className={`w-12 h-12 border border-gray-300 transition-colors duration-200 flex items-center justify-center text-sm font-medium ${
+                    size !== "XS" ? "-ml-px" : ""
+                  } ${["XL", "XXL", "XXXL"].includes(size) ? "-mt-px" : ""} ${
+                    !isAvailable
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : isSelected
+                      ? "bg-black text-white border-black z-10"
+                      : "bg-white hover:bg-gray-100 text-gray-700 hover:text-gray-900"
+                  }`}
+                >
+                  {size === "XXXL" ? (
+                    <span className="text-xs">XXXL</span>
+                  ) : (
+                    size
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Quantity and Add to Cart */}
+          <div className="flex items-center gap-4 mt-4">
+            {user && (
+              <div className="flex items-center">
+                <span className="text-sm font-medium mr-3 text-gray-700">
+                  Quantity:
+                </span>
+                <div className="flex items-center border border-gray-300 rounded">
+                  <button
+                    onClick={() => handleQuantityChange(-1)}
+                    className="w-10 h-10 flex items-center justify-center transition-colors duration-200 bg-white text-gray-600 hover:bg-gray-100"
+                    disabled={quantity <= 1}
+                  >
+                    -
+                  </button>
+                  <span className="w-12 h-10 flex items-center justify-center border-x border-gray-300 font-medium bg-gray-100 text-gray-800">
+                    {quantity}
+                  </span>
+                  <button
+                    onClick={() => handleQuantityChange(1)}
+                    className="w-10 h-10 flex items-center justify-center transition-colors duration-200 bg-white text-gray-600 hover:bg-gray-100"
+                    disabled={quantity >= currentStock}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={handleButtonClick}
+              disabled={isButtonDisabled()}
+              className={`px-6 py-2 rounded font-medium transition-colors duration-200 ${
+                isButtonDisabled()
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : !user
+                  ? "bg-blue-600 text-white hover:bg-blue-700"
+                  : "bg-black text-white hover:bg-gray-800"
+              }`}
+            >
+              {getButtonText()}
             </button>
           </div>
+
+          {/* Add to Cart Message */}
+          {addToCartMessage && (
+            <div
+              className={`mt-2 p-3 rounded-lg text-sm ${
+                addToCartMessage.includes("Added")
+                  ? "bg-green-100 text-green-800 border border-green-300"
+                  : addToCartMessage.includes("login")
+                  ? "bg-blue-100 text-blue-800 border border-blue-300"
+                  : "bg-red-100 text-red-800 border border-red-300"
+              }`}
+            >
+              {addToCartMessage}
+            </div>
+          )}
         </div>
+
+        {/* Size Chart */}
         <div className="size-chart my-10">
           <img
             src="/src/images/size_chart.png"
