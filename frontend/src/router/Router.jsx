@@ -16,6 +16,7 @@ import Profile from "../views/Profile";
 import Login from "../views/Login";
 import Register from "../views/Register";
 import SingleProduct from "../views/SingleProduct";
+import Checkout from "../views/Checkout";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -27,6 +28,7 @@ const router = createBrowserRouter(
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/product/:slug" element={<SingleProduct />} />
+      <Route path="/checkout" element={<Checkout />} />
       <Route
         path="/profile"
         element={

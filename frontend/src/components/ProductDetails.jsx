@@ -19,28 +19,22 @@ const ProductDetails = ({
 }) => {
   const navigate = useNavigate();
 
-  // Get sizes that are available for the selected color
-  const getSizesForColor = (color) => {
-    if (!product.variants || !color) return [];
-    return product.variants.filter((v) => v.color === color).map((v) => v.size);
-  };
-
-  // Get colors that are available for the selected size
-  const getColorsForSize = (size) => {
-    if (!product.variants || !size) return [];
-    return product.variants.filter((v) => v.size === size).map((v) => v.color);
-  };
-
-  // Check if a size is available for the selected color
+  // Check if a size is available (always allow selection, don't restrict based on color)
   const isSizeAvailable = (size) => {
-    if (!selectedColor) return availableSizes.includes(size);
-    return getSizesForColor(selectedColor).includes(size);
+    return availableSizes.includes(size);
   };
 
-  // Check if a color is available for the selected size
+  // Check if a color is available (always allow selection, don't restrict based on size)
   const isColorAvailable = (color) => {
-    if (!selectedSize) return availableColors.includes(color);
-    return getColorsForSize(selectedSize).includes(color);
+    return availableColors.includes(color);
+  };
+
+  // Check if the selected combination is valid (only used for stock checking)
+  const isValidCombination = () => {
+    if (!selectedSize || !selectedColor) return false;
+    return product.variants?.some(
+      (v) => v.size === selectedSize && v.color === selectedColor
+    );
   };
 
   const handleLoginRedirect = () => {
@@ -51,8 +45,12 @@ const ProductDetails = ({
     if (addingToCart) return "Adding...";
     if (!product.isActive) return "Out of Stock";
     if (!user) return "Login to Add to Cart";
+
+    // More helpful text based on what's missing
+    if (!selectedSize && !selectedColor) return "Select Size and Color";
     if (!selectedSize) return "Select Size";
     if (!selectedColor) return "Select Color";
+    if (!isValidCombination()) return "Invalid Size/Color Combination";
     return "Add to Cart";
   };
 
@@ -60,7 +58,7 @@ const ProductDetails = ({
     return (
       !product.isActive ||
       addingToCart ||
-      (user && (!selectedSize || !selectedColor))
+      (user && (!selectedSize || !selectedColor || !isValidCombination()))
     );
   };
 
@@ -161,27 +159,35 @@ const ProductDetails = ({
         {/* Stock Display - shown below color selection */}
         {selectedColor && selectedSize && (
           <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm font-medium text-gray-700">
-              Stock Available:{" "}
-            </span>
-            <span
-              className={`font-semibold ${
-                currentStock > 10
-                  ? "text-green-600"
-                  : currentStock > 5
-                  ? "text-yellow-600"
-                  : currentStock > 0
-                  ? "text-orange-600"
-                  : "text-red-600"
-              }`}
-            >
-              {currentStock} {currentStock === 1 ? "item" : "items"}
-            </span>
-            {currentStock === 0 && (
-              <div className="mt-2 text-xs text-red-600">
-                This item is out of stock but can still be added to cart. You
-                can purchase it when stock becomes available.
-              </div>
+            {isValidCombination() ? (
+              <>
+                <span className="text-sm font-medium text-gray-700">
+                  Stock Available:{" "}
+                </span>
+                <span
+                  className={`font-semibold ${
+                    currentStock > 10
+                      ? "text-green-600"
+                      : currentStock > 5
+                      ? "text-yellow-600"
+                      : currentStock > 0
+                      ? "text-orange-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {currentStock} {currentStock === 1 ? "item" : "items"}
+                </span>
+                {currentStock === 0 && (
+                  <div className="mt-2 text-xs text-red-600">
+                    This item is out of stock but can still be added to cart.
+                    You can purchase it when stock becomes available.
+                  </div>
+                )}
+              </>
+            ) : (
+              <span className="text-sm font-medium text-red-600">
+                This size/color combination is not available
+              </span>
             )}
           </div>
         )}

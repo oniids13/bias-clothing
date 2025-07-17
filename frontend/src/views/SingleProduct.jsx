@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 import ProductImageGallery from "../components/ProductImageGallery";
@@ -26,10 +26,22 @@ const SingleProduct = () => {
         const response = await fetch(
           `http://localhost:3000/api/product/${slug}`
         );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json();
+
+        if (!data) {
+          throw new Error("Product not found");
+        }
+
         setProduct(data);
       } catch (error) {
         console.error("Error fetching product:", error);
+        // Instead of throwing error, set product to null to show "Product not found"
+        setProduct(null);
       } finally {
         setLoading(false);
       }
@@ -52,8 +64,6 @@ const SingleProduct = () => {
 
   const handleSizeClick = (size) => {
     setSelectedSize(size);
-    // Reset color selection when size changes
-    setSelectedColor(null);
     setQuantity(1);
   };
 
