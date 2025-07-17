@@ -22,17 +22,13 @@ const ProductDetails = ({
   // Get sizes that are available for the selected color
   const getSizesForColor = (color) => {
     if (!product.variants || !color) return [];
-    return product.variants
-      .filter((v) => v.color === color && v.stock > 0)
-      .map((v) => v.size);
+    return product.variants.filter((v) => v.color === color).map((v) => v.size);
   };
 
   // Get colors that are available for the selected size
   const getColorsForSize = (size) => {
     if (!product.variants || !size) return [];
-    return product.variants
-      .filter((v) => v.size === size && v.stock > 0)
-      .map((v) => v.color);
+    return product.variants.filter((v) => v.size === size).map((v) => v.color);
   };
 
   // Check if a size is available for the selected color
@@ -57,7 +53,6 @@ const ProductDetails = ({
     if (!user) return "Login to Add to Cart";
     if (!selectedSize) return "Select Size";
     if (!selectedColor) return "Select Color";
-    if (currentStock === 0) return "Out of Stock";
     return "Add to Cart";
   };
 
@@ -65,7 +60,7 @@ const ProductDetails = ({
     return (
       !product.isActive ||
       addingToCart ||
-      (user && (!selectedSize || !selectedColor || currentStock === 0))
+      (user && (!selectedSize || !selectedColor))
     );
   };
 
@@ -182,6 +177,12 @@ const ProductDetails = ({
             >
               {currentStock} {currentStock === 1 ? "item" : "items"}
             </span>
+            {currentStock === 0 && (
+              <div className="mt-2 text-xs text-red-600">
+                This item is out of stock but can still be added to cart. You
+                can purchase it when stock becomes available.
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -246,7 +247,6 @@ const ProductDetails = ({
                   <button
                     onClick={() => handleQuantityChange(1)}
                     className="w-10 h-10 flex items-center justify-center transition-colors duration-200 bg-white text-gray-600 hover:bg-gray-100"
-                    disabled={quantity >= currentStock}
                   >
                     +
                   </button>

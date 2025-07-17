@@ -4,12 +4,14 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import { cartApi } from "../services/cartApi";
 
 import LogoCover from "./LogoCover";
 
 const Header = ({ user, setUser }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [cartItemCount, setCartItemCount] = useState(0);
   const navigate = useNavigate();
 
   const toggleMenu = () => {
@@ -56,6 +58,18 @@ const Header = ({ user, setUser }) => {
     };
   }, [setUser]);
 
+  // Fetch cart item count when user changes
+  useEffect(() => {
+    if (user) {
+      fetchCartItemCount();
+      // Set up interval to refresh cart count periodically
+      const interval = setInterval(fetchCartItemCount, 30000); // Refresh every 30 seconds
+      return () => clearInterval(interval);
+    } else {
+      setCartItemCount(0);
+    }
+  }, [user]);
+
   const checkUserAuth = async () => {
     try {
       const response = await fetch("http://localhost:3000/auth/user", {
@@ -81,8 +95,30 @@ const Header = ({ user, setUser }) => {
     }
   };
 
+  const fetchCartItemCount = async () => {
+    if (!user) return;
+
+    try {
+      const response = await cartApi.getCartItemCount();
+      console.log("Cart count response:", response); // Debug log
+      if (response.success) {
+        setCartItemCount(response.count || 0);
+      } else {
+        console.error("Failed to fetch cart count:", response.message);
+        setCartItemCount(0);
+      }
+    } catch (error) {
+      console.error("Error fetching cart item count:", error);
+      // Don't reset to 0 on error, keep current count
+    }
+  };
+
   const logInPage = () => {
     navigate("/login");
+  };
+
+  const googleLogin = () => {
+    window.location.href = "http://localhost:3000/auth/google";
   };
 
   const handleLogout = async () => {
@@ -99,6 +135,7 @@ const Header = ({ user, setUser }) => {
 
       if (response.ok) {
         setUser(null);
+        setCartItemCount(0);
         closeMenu();
         // Force a re-check of authentication status after logout
         setTimeout(() => {
@@ -111,11 +148,27 @@ const Header = ({ user, setUser }) => {
     }
   };
 
+  const CartIconWithBadge = ({ className = "", fontSize = "medium" }) => (
+    <div className={`relative inline-block ${className}`}>
+      <ShoppingCartIcon fontSize={fontSize} />
+      {cartItemCount > 0 && (
+        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[16px] h-4 flex items-center justify-center font-bold text-[10px] px-1">
+          {cartItemCount > 99 ? "99+" : cartItemCount}
+        </span>
+      )}
+    </div>
+  );
+
+  // Function to refresh cart count (can be called from other components)
+  window.refreshCartCount = fetchCartItemCount;
+
   return (
     <>
       <header className="p-10 relative">
         <div className="flex justify-between items-center">
-          <img className="w-30" src="/src/images/bias_logo.png" alt="logo" />
+          <Link to="/">
+            <img className="w-30" src="/src/images/bias_logo.png" alt="logo" />
+          </Link>
 
           {/* Desktop Navigation - Hidden on mobile */}
           <div className="hidden md:flex gap-10 font-bold">
@@ -124,23 +177,23 @@ const Header = ({ user, setUser }) => {
             <Link to="/shop">Shop</Link>
           </div>
 
-          {/* Desktop Cart - Hidden on mobile */}
-          <div className="hidden md:block">
-            <Link to="/cart" className="mr-4">
-              <ShoppingCartIcon />
+          {/* Desktop Cart and User - Hidden on mobile */}
+          <div className="hidden md:flex items-center gap-4">
+            <Link to="/cart" className="inline-block">
+              <CartIconWithBadge />
             </Link>
             {user ? (
               <>
                 <Link
                   to="/profile"
-                  className="mr-4"
+                  className="inline-block"
                   title={`Profile - ${user.name}`}
                 >
                   {user.avatar ? (
                     <img
                       src={user.avatar}
                       alt="Profile"
-                      className="w-6 h-6 rounded-full inline"
+                      className="w-6 h-6 rounded-full"
                     />
                   ) : (
                     <AccountCircleIcon />
@@ -148,13 +201,13 @@ const Header = ({ user, setUser }) => {
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="mr-4 text-sm hover:text-gray-600"
+                  className="text-sm hover:text-gray-600 font-medium"
                 >
                   Logout
                 </button>
               </>
             ) : (
-              <button onClick={logInPage} className="mr-4" disabled={isLoading}>
+              <button onClick={logInPage} disabled={isLoading}>
                 <AccountCircleIcon />
               </button>
             )}
@@ -201,7 +254,7 @@ const Header = ({ user, setUser }) => {
                 onClick={closeMenu}
                 className="font-bold hover:text-gray-600 transition-colors flex items-center gap-2 py-2 px-3 rounded hover:bg-gray-100"
               >
-                <ShoppingCartIcon fontSize="small" />
+                <CartIconWithBadge fontSize="small" />
                 Cart
               </Link>
 

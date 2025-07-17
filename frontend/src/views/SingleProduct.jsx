@@ -45,15 +45,10 @@ const SingleProduct = () => {
       );
       const stock = variant ? variant.stock : 0;
       setCurrentStock(stock);
-
-      // If current quantity exceeds available stock, reduce it
-      if (quantity > stock) {
-        setQuantity(Math.max(1, stock));
-      }
     } else {
       setCurrentStock(0);
     }
-  }, [product, selectedSize, selectedColor, quantity]);
+  }, [product, selectedSize, selectedColor]);
 
   const handleSizeClick = (size) => {
     setSelectedSize(size);
@@ -69,10 +64,7 @@ const SingleProduct = () => {
 
   const handleQuantityChange = (change) => {
     const newQuantity = Math.max(1, quantity + change);
-    // Don't allow quantity to exceed current stock
-    if (newQuantity <= currentStock) {
-      setQuantity(newQuantity);
-    }
+    setQuantity(newQuantity);
   };
 
   const handleAddToCart = async () => {
@@ -97,12 +89,6 @@ const SingleProduct = () => {
       return;
     }
 
-    if (currentStock < quantity) {
-      setAddToCartMessage(`Only ${currentStock} items available`);
-      setTimeout(() => setAddToCartMessage(""), 3000);
-      return;
-    }
-
     setAddingToCart(true);
     setAddToCartMessage("");
 
@@ -117,15 +103,13 @@ const SingleProduct = () => {
       if (response.success) {
         setAddToCartMessage(`Added ${quantity} item(s) to cart!`);
 
-        // Refresh the product data to get updated stock
-        const productResponse = await fetch(
-          `http://localhost:3000/api/product/${slug}`
-        );
-        const updatedProduct = await productResponse.json();
-        setProduct(updatedProduct);
-
         // Reset quantity to 1 after successful add
         setQuantity(1);
+
+        // Refresh cart count in header
+        if (window.refreshCartCount) {
+          window.refreshCartCount();
+        }
 
         setTimeout(() => setAddToCartMessage(""), 3000);
       } else {

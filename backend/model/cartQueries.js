@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// Add item to cart or update quantity if exists
+// Add item to cart (no stock deduction)
 const addCart = async ({ userId, productId, size, color, quantity = 1 }) => {
   try {
     // Check if user exists
@@ -21,7 +21,7 @@ const addCart = async ({ userId, productId, size, color, quantity = 1 }) => {
       throw new Error("Product not found");
     }
 
-    // Find the specific product variant
+    // Find the specific product variant to check if it exists
     const productVariant = await prisma.productVariant.findUnique({
       where: {
         productId_size_color: {
@@ -49,62 +49,32 @@ const addCart = async ({ userId, productId, size, color, quantity = 1 }) => {
     });
 
     if (existingCartItem) {
-      // Check if there's enough stock for the additional quantity
-      if (productVariant.stock < quantity) {
-        throw new Error(
-          `Insufficient stock. Only ${productVariant.stock} items available.`
-        );
-      }
-
-      // Update quantity in cart and deduct from stock
-      const [updatedCartItem] = await prisma.$transaction([
-        prisma.cartItem.update({
-          where: { id: existingCartItem.id },
-          data: {
-            quantity: existingCartItem.quantity + quantity,
-          },
-          include: {
-            product: true,
-          },
-        }),
-        prisma.productVariant.update({
-          where: { id: productVariant.id },
-          data: {
-            stock: productVariant.stock - quantity,
-          },
-        }),
-      ]);
+      // Update quantity if item exists (no stock deduction)
+      const updatedCartItem = await prisma.cartItem.update({
+        where: { id: existingCartItem.id },
+        data: {
+          quantity: existingCartItem.quantity + quantity,
+        },
+        include: {
+          product: true,
+        },
+      });
 
       return updatedCartItem;
     } else {
-      // Check if there's enough stock for the new item
-      if (productVariant.stock < quantity) {
-        throw new Error(
-          `Insufficient stock. Only ${productVariant.stock} items available.`
-        );
-      }
-
-      // Create new cart item and deduct from stock
-      const [newCartItem] = await prisma.$transaction([
-        prisma.cartItem.create({
-          data: {
-            userId,
-            productId,
-            size,
-            color,
-            quantity,
-          },
-          include: {
-            product: true,
-          },
-        }),
-        prisma.productVariant.update({
-          where: { id: productVariant.id },
-          data: {
-            stock: productVariant.stock - quantity,
-          },
-        }),
-      ]);
+      // Create new cart item (no stock deduction)
+      const newCartItem = await prisma.cartItem.create({
+        data: {
+          userId,
+          productId,
+          size,
+          color,
+          quantity,
+        },
+        include: {
+          product: true,
+        },
+      });
 
       return newCartItem;
     }
@@ -114,161 +84,88 @@ const addCart = async ({ userId, productId, size, color, quantity = 1 }) => {
   }
 };
 
-// Get all cart items for a user
+// Get all cart items for a user with current stock info
 const getCart = async (userId) => {
   try {
     const cartItems = await prisma.cartItem.findMany({
       where: { userId },
       include: {
-        product: true,
+        product: {
+          include: {
+            variants: true,
+          },
+        },
       },
       orderBy: {
         createdAt: "desc",
       },
     });
-    return cartItems;
+
+    // Add current stock info to each cart item
+    const cartItemsWithStock = cartItems.map((item) => {
+      const variant = item.product.variants.find(
+        (v) => v.size === item.size && v.color === item.color
+      );
+
+      return {
+        ...item,
+        currentStock: variant ? variant.stock : 0,
+        isAvailable: variant ? variant.stock > 0 : false,
+      };
+    });
+
+    return cartItemsWithStock;
   } catch (error) {
     console.error("Error fetching cart:", error);
     throw error;
   }
 };
 
-// Update cart item quantity
+// Update cart item quantity (no stock operations)
 const updateCart = async ({ cartItemId, quantity }) => {
   try {
     if (quantity <= 0) {
       throw new Error("Quantity must be greater than 0");
     }
 
-    // Get the current cart item
-    const currentCartItem = await prisma.cartItem.findUnique({
+    const updatedCartItem = await prisma.cartItem.update({
       where: { id: cartItemId },
+      data: { quantity },
       include: {
-        product: true,
-      },
-    });
-
-    if (!currentCartItem) {
-      throw new Error("Cart item not found");
-    }
-
-    // Get the product variant
-    const productVariant = await prisma.productVariant.findUnique({
-      where: {
-        productId_size_color: {
-          productId: currentCartItem.productId,
-          size: currentCartItem.size,
-          color: currentCartItem.color,
+        product: {
+          include: {
+            variants: true,
+          },
         },
       },
     });
 
-    if (!productVariant) {
-      throw new Error("Product variant not found");
-    }
+    // Add current stock info
+    const variant = updatedCartItem.product.variants.find(
+      (v) =>
+        v.size === updatedCartItem.size && v.color === updatedCartItem.color
+    );
 
-    const quantityDifference = quantity - currentCartItem.quantity;
-
-    if (quantityDifference > 0) {
-      // Increasing quantity - check if there's enough stock
-      if (productVariant.stock < quantityDifference) {
-        throw new Error(
-          `Insufficient stock. Only ${productVariant.stock} additional items available.`
-        );
-      }
-
-      // Update cart item and deduct additional stock
-      const [updatedCartItem] = await prisma.$transaction([
-        prisma.cartItem.update({
-          where: { id: cartItemId },
-          data: { quantity },
-          include: {
-            product: true,
-          },
-        }),
-        prisma.productVariant.update({
-          where: { id: productVariant.id },
-          data: {
-            stock: productVariant.stock - quantityDifference,
-          },
-        }),
-      ]);
-
-      return updatedCartItem;
-    } else if (quantityDifference < 0) {
-      // Decreasing quantity - add stock back
-      const [updatedCartItem] = await prisma.$transaction([
-        prisma.cartItem.update({
-          where: { id: cartItemId },
-          data: { quantity },
-          include: {
-            product: true,
-          },
-        }),
-        prisma.productVariant.update({
-          where: { id: productVariant.id },
-          data: {
-            stock: productVariant.stock + Math.abs(quantityDifference),
-          },
-        }),
-      ]);
-
-      return updatedCartItem;
-    } else {
-      // No quantity change
-      return currentCartItem;
-    }
+    return {
+      ...updatedCartItem,
+      currentStock: variant ? variant.stock : 0,
+      isAvailable: variant ? variant.stock > 0 : false,
+    };
   } catch (error) {
     console.error("Error updating cart item:", error);
     throw error;
   }
 };
 
-// Delete specific cart item
+// Delete specific cart item (no stock operations)
 const deleteCart = async (cartItemId) => {
   try {
-    // Get the cart item first
-    const cartItem = await prisma.cartItem.findUnique({
+    const deletedCartItem = await prisma.cartItem.delete({
       where: { id: cartItemId },
       include: {
         product: true,
       },
     });
-
-    if (!cartItem) {
-      throw new Error("Cart item not found");
-    }
-
-    // Get the product variant
-    const productVariant = await prisma.productVariant.findUnique({
-      where: {
-        productId_size_color: {
-          productId: cartItem.productId,
-          size: cartItem.size,
-          color: cartItem.color,
-        },
-      },
-    });
-
-    if (!productVariant) {
-      throw new Error("Product variant not found");
-    }
-
-    // Delete cart item and restore stock
-    const [deletedCartItem] = await prisma.$transaction([
-      prisma.cartItem.delete({
-        where: { id: cartItemId },
-        include: {
-          product: true,
-        },
-      }),
-      prisma.productVariant.update({
-        where: { id: productVariant.id },
-        data: {
-          stock: productVariant.stock + cartItem.quantity,
-        },
-      }),
-    ]);
 
     return deletedCartItem;
   } catch (error) {
@@ -277,55 +174,21 @@ const deleteCart = async (cartItemId) => {
   }
 };
 
-// Clear all cart items for a user
+// Clear all cart items for a user (no stock operations)
 const clearCart = async (userId) => {
   try {
-    // Get all cart items for the user
-    const cartItems = await prisma.cartItem.findMany({
+    const deletedCount = await prisma.cartItem.deleteMany({
       where: { userId },
     });
 
-    // Restore stock for all items
-    const stockUpdates = [];
-    for (const cartItem of cartItems) {
-      const productVariant = await prisma.productVariant.findUnique({
-        where: {
-          productId_size_color: {
-            productId: cartItem.productId,
-            size: cartItem.size,
-            color: cartItem.color,
-          },
-        },
-      });
-
-      if (productVariant) {
-        stockUpdates.push(
-          prisma.productVariant.update({
-            where: { id: productVariant.id },
-            data: {
-              stock: productVariant.stock + cartItem.quantity,
-            },
-          })
-        );
-      }
-    }
-
-    // Execute all updates in a transaction
-    const deletedCount = await prisma.$transaction([
-      prisma.cartItem.deleteMany({
-        where: { userId },
-      }),
-      ...stockUpdates,
-    ]);
-
-    return deletedCount[0]; // Return the delete count
+    return deletedCount;
   } catch (error) {
     console.error("Error clearing cart:", error);
     throw error;
   }
 };
 
-// Get cart item count for a user
+// Get cart item count
 const getCartItemCount = async (userId) => {
   try {
     const count = await prisma.cartItem.aggregate({
@@ -341,23 +204,35 @@ const getCartItemCount = async (userId) => {
   }
 };
 
-// Get cart total for a user
+// Get cart total with availability check
 const getCartTotal = async (userId) => {
   try {
-    const cartItems = await prisma.cartItem.findMany({
-      where: { userId },
-      include: {
-        product: true,
-      },
-    });
+    const cartItems = await getCart(userId);
 
-    const total = cartItems.reduce((sum, item) => {
+    // Separate available and unavailable items
+    const availableItems = cartItems.filter((item) => item.isAvailable);
+    const unavailableItems = cartItems.filter((item) => !item.isAvailable);
+
+    // Calculate total for available items only
+    const subtotal = availableItems.reduce((sum, item) => {
       return sum + item.product.price * item.quantity;
     }, 0);
 
+    const totalItemCount = cartItems.reduce(
+      (sum, item) => sum + item.quantity,
+      0
+    );
+    const availableItemCount = availableItems.reduce(
+      (sum, item) => sum + item.quantity,
+      0
+    );
+
     return {
-      subtotal: total,
-      itemCount: cartItems.reduce((sum, item) => sum + item.quantity, 0),
+      subtotal,
+      totalItemCount,
+      availableItemCount,
+      availableItems,
+      unavailableItems,
       items: cartItems,
     };
   } catch (error) {
