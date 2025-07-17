@@ -88,6 +88,35 @@ const products = [
       "Made in PH",
     ],
   },
+  {
+    name: "Bias T-shirt Khaki",
+    description:
+      "High-quality 100% cotton t-shirt with a comfortable fit. Perfect for every occasion.",
+    imageUrl: [
+      "https://res.cloudinary.com/dli2wmthu/image/upload/v1752730561/bias-khaki3_vuqayk.png",
+      "https://res.cloudinary.com/dli2wmthu/image/upload/v1752730386/bias-khaki_w8kpnf.png",
+      "https://res.cloudinary.com/dli2wmthu/image/upload/v1752730391/bias-khaki2_pdpic3.png",
+    ],
+    price: 600,
+    category: "T-Shirts",
+    isFeatured: true,
+    isNew: true,
+    variants: [
+      { size: "XS", color: "Khaki", stock: 25 },
+      { size: "S", color: "Khaki", stock: 30 },
+      { size: "M", color: "Khaki", stock: 20 },
+      { size: "L", color: "Khaki", stock: 15 },
+      { size: "XL", color: "Khaki", stock: 20 },
+      { size: "XXL", color: "Khaki", stock: 25 },
+      { size: "XXXL", color: "Khaki", stock: 18 },
+    ],
+    details: [
+      "100% Cotton",
+      "Silkscreen printed design",
+      "Machine washable",
+      "Made in PH",
+    ],
+  },
 ];
 
 // Generate SKU based on product name, size, and color
