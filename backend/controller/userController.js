@@ -1,4 +1,13 @@
-import { createUser, getUserLogin } from "../model/userQueries.js";
+import {
+  createUser,
+  getUserLogin,
+  getUserWithAddresses,
+  updateUserPhone,
+  addAddress,
+  updateAddress,
+  deleteAddress,
+  setDefaultAddress,
+} from "../model/userQueries.js";
 import { body, validationResult } from "express-validator";
 import { genPassword } from "../utils/passwordUtil.js";
 
@@ -125,4 +134,190 @@ const loginUser = async (req, res) => {
   }
 };
 
-export { registerUser, loginUser };
+// Get user profile with addresses
+const getUserProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await getUserWithAddresses(userId);
+
+    res.status(200).json({
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        avatar: user.avatar,
+        addresses: user.addresses,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching user profile",
+    });
+  }
+};
+
+// Update user phone
+const updateUserPhoneController = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { phone } = req.body;
+
+    const user = await updateUserPhone(userId, phone);
+
+    res.status(200).json({
+      success: true,
+      message: "Phone number updated successfully",
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        avatar: user.avatar,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating phone:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error updating phone number",
+    });
+  }
+};
+
+// Add new address
+const addAddressController = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { street, barangay, city, state, zipCode, country, isDefault } =
+      req.body;
+
+    // Validate required fields
+    if (!street || !barangay || !city || !state || !zipCode) {
+      return res.status(400).json({
+        success: false,
+        message: "Street, barangay, city, state, and zip code are required",
+      });
+    }
+
+    const address = await addAddress(userId, {
+      street,
+      barangay,
+      city,
+      state,
+      zipCode,
+      country: country || "Philippines",
+      isDefault: isDefault || false,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Address added successfully",
+      address,
+    });
+  } catch (error) {
+    console.error("Error adding address:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error adding address",
+    });
+  }
+};
+
+// Update address
+const updateAddressController = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id: addressId } = req.params;
+    const { street, barangay, city, state, zipCode, country, isDefault } =
+      req.body;
+
+    // Validate required fields
+    if (!street || !barangay || !city || !state || !zipCode) {
+      return res.status(400).json({
+        success: false,
+        message: "Street, barangay, city, state, and zip code are required",
+      });
+    }
+
+    const address = await updateAddress(addressId, userId, {
+      street,
+      barangay,
+      city,
+      state,
+      zipCode,
+      country: country || "Philippines",
+      isDefault: isDefault || false,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Address updated successfully",
+      address,
+    });
+  } catch (error) {
+    console.error("Error updating address:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error updating address",
+    });
+  }
+};
+
+// Delete address
+const deleteAddressController = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id: addressId } = req.params;
+
+    const address = await deleteAddress(addressId, userId);
+
+    res.status(200).json({
+      success: true,
+      message: "Address deleted successfully",
+      address,
+    });
+  } catch (error) {
+    console.error("Error deleting address:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error deleting address",
+    });
+  }
+};
+
+// Set default address
+const setDefaultAddressController = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id: addressId } = req.params;
+
+    const address = await setDefaultAddress(addressId, userId);
+
+    res.status(200).json({
+      success: true,
+      message: "Default address updated successfully",
+      address,
+    });
+  } catch (error) {
+    console.error("Error setting default address:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error setting default address",
+    });
+  }
+};
+
+export {
+  registerUser,
+  loginUser,
+  getUserProfile,
+  updateUserPhoneController,
+  addAddressController,
+  updateAddressController,
+  deleteAddressController,
+  setDefaultAddressController,
+};

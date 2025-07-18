@@ -63,6 +63,7 @@ model Address {
   userId   String @db.ObjectId
   
   street   String
+  barangay String
   city     String
   state    String
   zipCode  String

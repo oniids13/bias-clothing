@@ -59,6 +59,35 @@ const Checkout = () => {
     }
   };
 
+  const fetchUserDefaultAddress = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/api/user/profile", {
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const defaultAddress = data.user.addresses?.find(
+          (addr) => addr.isDefault
+        );
+
+        if (defaultAddress) {
+          setDeliveryDetails((prev) => ({
+            ...prev,
+            addressLine1: defaultAddress.street,
+            addressLine2: "",
+            barangay: defaultAddress.barangay,
+            city: defaultAddress.city,
+            zipCode: defaultAddress.zipCode,
+            region: defaultAddress.state,
+          }));
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user default address:", error);
+    }
+  };
+
   const populateUserInfo = () => {
     if (user) {
       setContactInfo({
@@ -79,10 +108,32 @@ const Checkout = () => {
 
   const handleDeliveryDetailsChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setDeliveryDetails((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+
+    if (name === "useSavedAddress" && checked) {
+      // Fetch and populate with user's default address
+      fetchUserDefaultAddress();
+      setDeliveryDetails((prev) => ({
+        ...prev,
+        useSavedAddress: true,
+      }));
+    } else if (name === "useSavedAddress" && !checked) {
+      // Clear address fields when unchecked
+      setDeliveryDetails((prev) => ({
+        ...prev,
+        useSavedAddress: false,
+        addressLine1: "",
+        addressLine2: "",
+        barangay: "",
+        city: "",
+        zipCode: "",
+        region: "",
+      }));
+    } else {
+      setDeliveryDetails((prev) => ({
+        ...prev,
+        [name]: type === "checkbox" ? checked : value,
+      }));
+    }
   };
 
   const handlePaymentOptionChange = (e) => {
