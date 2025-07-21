@@ -11,6 +11,11 @@ import {
   deleteOrderController,
   getOrderStatsController,
 
+  // Stock management controllers
+  checkStockController,
+  getLowStockController,
+  getVariantStockController,
+
   // Order item controllers
   createOrderItemController,
   getOrderItemsByOrderController,
@@ -57,6 +62,23 @@ router.patch("/:orderId/tracking", requireAuth, updateTrackingNumberController);
 
 // Cancel/Delete order (Protected - User can cancel own orders, Admin can cancel any)
 router.delete("/:orderId", requireAuth, deleteOrderController);
+
+// ============================================
+// STOCK MANAGEMENT ROUTES
+// ============================================
+
+// Check stock availability for items (Protected - User must be authenticated)
+router.post("/stock/check", requireAuth, checkStockController);
+
+// Get low stock items (Protected - Admin only)
+router.get("/stock/low", requireAuth, getLowStockController);
+
+// Get stock for specific product variant (Protected - User must be authenticated)
+router.get(
+  "/stock/:productId/:size/:color",
+  requireAuth,
+  getVariantStockController
+);
 
 // ============================================
 // ORDER ITEM ROUTES

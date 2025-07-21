@@ -56,6 +56,79 @@ const createOrder = async (orderData) => {
   }
 };
 
+// Create a new order with stock validation and automatic stock decrease
+const createOrderWithStockManagement = async (orderData) => {
+  const transaction = await prisma.$transaction(async (prisma) => {
+    try {
+      // Step 1: Check stock availability for all items
+      const stockValidation = await checkStockAvailability(orderData.items);
+
+      if (!stockValidation.allItemsAvailable) {
+        throw new Error(
+          `Stock validation failed: ${JSON.stringify(
+            stockValidation.unavailableItems
+          )}`
+        );
+      }
+
+      // Step 2: Create the order
+      const order = await prisma.order.create({
+        data: {
+          userId: orderData.userId,
+          addressId: orderData.addressId,
+          orderNumber: orderData.orderNumber,
+          status: orderData.status || "PENDING",
+          subtotal: orderData.subtotal,
+          shipping: orderData.shipping || 0,
+          discount: orderData.discount || 0,
+          total: orderData.total,
+          paymentMethod: orderData.paymentMethod,
+          paymentStatus: orderData.paymentStatus || "PENDING",
+          paymentIntentId: orderData.paymentIntentId,
+          customerNotes: orderData.customerNotes,
+          adminNotes: orderData.adminNotes,
+          items: {
+            create:
+              orderData.items?.map((item) => ({
+                productId: item.productId,
+                productName: item.productName,
+                size: item.size,
+                color: item.color,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                totalPrice: item.totalPrice,
+              })) || [],
+          },
+        },
+        include: {
+          items: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          address: true,
+        },
+      });
+
+      // Step 3: Decrease stock levels for all order items
+      await updateProductStock(orderData.items, "decrease");
+
+      return {
+        ...order,
+        stockUpdates: stockValidation.stockChecks,
+      };
+    } catch (error) {
+      console.error("Error in createOrderWithStockManagement:", error);
+      throw error;
+    }
+  });
+
+  return transaction;
+};
+
 // Get order by ID with all related data
 const getOrderById = async (orderId) => {
   try {
@@ -211,7 +284,69 @@ const getAllOrders = async (options = {}) => {
   }
 };
 
-// Update order status
+// Update order status with stock restoration for cancellations
+const updateOrderStatusWithStockManagement = async (
+  orderId,
+  newStatus,
+  adminNotes = null
+) => {
+  try {
+    // First, get the current order to check its current status
+    const currentOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: true,
+      },
+    });
+
+    if (!currentOrder) {
+      throw new Error("Order not found");
+    }
+
+    // Check if we need to restore stock (when cancelling or returning)
+    const shouldRestoreStock =
+      (newStatus === "CANCELLED" || newStatus === "RETURNED") &&
+      !["CANCELLED", "RETURNED"].includes(currentOrder.status);
+
+    const transaction = await prisma.$transaction(async (prisma) => {
+      // Update the order status
+      const updateData = { status: newStatus };
+      if (adminNotes) {
+        updateData.adminNotes = adminNotes;
+      }
+
+      const updatedOrder = await prisma.order.update({
+        where: { id: orderId },
+        data: updateData,
+        include: {
+          items: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          address: true,
+        },
+      });
+
+      // Restore stock if order is being cancelled or returned
+      if (shouldRestoreStock) {
+        await updateProductStock(currentOrder.items, "increase");
+      }
+
+      return updatedOrder;
+    });
+
+    return transaction;
+  } catch (error) {
+    console.error("Error updating order status with stock management:", error);
+    throw error;
+  }
+};
+
+// Update order status (original function for backward compatibility)
 const updateOrderStatus = async (orderId, status, adminNotes = null) => {
   try {
     const updateData = { status };
@@ -298,7 +433,47 @@ const updateTrackingNumber = async (orderId, trackingNumber) => {
   }
 };
 
-// Delete order (soft delete by updating status)
+// Delete order (soft delete by updating status) with stock restoration
+const deleteOrderWithStockManagement = async (orderId) => {
+  try {
+    // Get the current order to restore stock
+    const currentOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: true,
+      },
+    });
+
+    if (!currentOrder) {
+      throw new Error("Order not found");
+    }
+
+    const transaction = await prisma.$transaction(async (prisma) => {
+      // Update order status to CANCELLED
+      const order = await prisma.order.update({
+        where: { id: orderId },
+        data: { status: "CANCELLED" },
+      });
+
+      // Restore stock only if order wasn't already cancelled
+      if (
+        currentOrder.status !== "CANCELLED" &&
+        currentOrder.status !== "RETURNED"
+      ) {
+        await updateProductStock(currentOrder.items, "increase");
+      }
+
+      return order;
+    });
+
+    return transaction;
+  } catch (error) {
+    console.error("Error deleting order with stock management:", error);
+    throw error;
+  }
+};
+
+// Delete order (original function for backward compatibility)
 const deleteOrder = async (orderId) => {
   try {
     const order = await prisma.order.update({
@@ -538,16 +713,183 @@ const generateOrderNumber = async () => {
   }
 };
 
+// ============================================
+// STOCK MANAGEMENT FUNCTIONS
+// ============================================
+
+// Check stock availability for order items
+const checkStockAvailability = async (items) => {
+  try {
+    const stockChecks = await Promise.all(
+      items.map(async (item) => {
+        const variant = await prisma.productVariant.findUnique({
+          where: {
+            productId_size_color: {
+              productId: item.productId,
+              size: item.size,
+              color: item.color,
+            },
+          },
+          select: {
+            stock: true,
+            sku: true,
+          },
+        });
+
+        if (!variant) {
+          return {
+            productId: item.productId,
+            size: item.size,
+            color: item.color,
+            available: false,
+            error: "Product variant not found",
+          };
+        }
+
+        const isAvailable = variant.stock >= item.quantity;
+        return {
+          productId: item.productId,
+          size: item.size,
+          color: item.color,
+          requestedQuantity: item.quantity,
+          availableStock: variant.stock,
+          sku: variant.sku,
+          available: isAvailable,
+          error: isAvailable ? null : "Insufficient stock",
+        };
+      })
+    );
+
+    const unavailableItems = stockChecks.filter((check) => !check.available);
+
+    return {
+      allItemsAvailable: unavailableItems.length === 0,
+      stockChecks,
+      unavailableItems,
+    };
+  } catch (error) {
+    console.error("Error checking stock availability:", error);
+    throw error;
+  }
+};
+
+// Update stock levels (decrease for orders, increase for cancellations)
+const updateProductStock = async (items, operation = "decrease") => {
+  try {
+    const stockUpdates = await Promise.all(
+      items.map(async (item) => {
+        const updateData = {};
+
+        if (operation === "decrease") {
+          updateData.stock = { decrement: item.quantity };
+        } else if (operation === "increase") {
+          updateData.stock = { increment: item.quantity };
+        }
+
+        const updatedVariant = await prisma.productVariant.update({
+          where: {
+            productId_size_color: {
+              productId: item.productId,
+              size: item.size,
+              color: item.color,
+            },
+          },
+          data: updateData,
+          select: {
+            id: true,
+            sku: true,
+            stock: true,
+            productId: true,
+            size: true,
+            color: true,
+          },
+        });
+
+        return updatedVariant;
+      })
+    );
+
+    return stockUpdates;
+  } catch (error) {
+    console.error(`Error ${operation}ing stock:`, error);
+    throw error;
+  }
+};
+
+// Get low stock items (admin utility)
+const getLowStockItems = async (threshold = 5) => {
+  try {
+    const lowStockItems = await prisma.productVariant.findMany({
+      where: {
+        stock: {
+          lte: threshold,
+        },
+      },
+      include: {
+        product: {
+          select: {
+            id: true,
+            name: true,
+            category: true,
+          },
+        },
+      },
+      orderBy: {
+        stock: "asc",
+      },
+    });
+
+    return lowStockItems;
+  } catch (error) {
+    console.error("Error fetching low stock items:", error);
+    throw error;
+  }
+};
+
+// Get current stock for a specific product variant
+const getProductVariantStock = async (productId, size, color) => {
+  try {
+    const variant = await prisma.productVariant.findUnique({
+      where: {
+        productId_size_color: {
+          productId,
+          size,
+          color,
+        },
+      },
+      select: {
+        stock: true,
+        sku: true,
+        size: true,
+        color: true,
+        product: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    return variant;
+  } catch (error) {
+    console.error("Error fetching product variant stock:", error);
+    throw error;
+  }
+};
+
 export {
   // Order queries
   createOrder,
+  createOrderWithStockManagement, // NEW: With stock validation and management
   getOrderById,
   getOrdersByUser,
   getAllOrders,
   updateOrderStatus,
+  updateOrderStatusWithStockManagement, // NEW: With stock restoration
   updatePaymentStatus,
   updateTrackingNumber,
   deleteOrder,
+  deleteOrderWithStockManagement, // NEW: With stock restoration
   getOrderStats,
   generateOrderNumber,
 
@@ -557,4 +899,10 @@ export {
   getOrderItemById,
   updateOrderItem,
   deleteOrderItem,
+
+  // Stock management queries
+  checkStockAvailability, // NEW: Check if items are available
+  updateProductStock, // NEW: Update stock levels
+  getLowStockItems, // NEW: Get low stock alerts
+  getProductVariantStock, // NEW: Get specific variant stock
 };

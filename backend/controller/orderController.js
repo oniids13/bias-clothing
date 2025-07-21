@@ -1,12 +1,15 @@
 import {
   createOrder,
+  createOrderWithStockManagement,
   getOrderById,
   getOrdersByUser,
   getAllOrders,
   updateOrderStatus,
+  updateOrderStatusWithStockManagement,
   updatePaymentStatus,
   updateTrackingNumber,
   deleteOrder,
+  deleteOrderWithStockManagement,
   getOrderStats,
   generateOrderNumber,
   createOrderItem,
@@ -14,13 +17,17 @@ import {
   getOrderItemById,
   updateOrderItem,
   deleteOrderItem,
+  checkStockAvailability,
+  updateProductStock,
+  getLowStockItems,
+  getProductVariantStock,
 } from "../model/orderQueries.js";
 
 // ============================================
 // ORDER CONTROLLERS
 // ============================================
 
-// Create a new order
+// Create a new order with stock validation and automatic stock management
 const createOrderController = async (req, res) => {
   try {
     const {
@@ -53,7 +60,7 @@ const createOrderController = async (req, res) => {
       });
     }
 
-    // Validate items
+    // Validate items structure
     for (const item of items) {
       if (
         !item.productId ||
@@ -69,6 +76,15 @@ const createOrderController = async (req, res) => {
             "Each item must have productId, productName, size, color, quantity, and unitPrice",
         });
       }
+
+      // Validate positive quantities
+      if (item.quantity <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Item quantities must be positive numbers",
+        });
+      }
+
       item.totalPrice = item.quantity * item.unitPrice;
     }
 
@@ -90,7 +106,8 @@ const createOrderController = async (req, res) => {
       items,
     };
 
-    const order = await createOrder(orderData);
+    // Create order with stock management
+    const order = await createOrderWithStockManagement(orderData);
 
     res.status(201).json({
       success: true,
@@ -99,6 +116,28 @@ const createOrderController = async (req, res) => {
     });
   } catch (error) {
     console.error("Create order error:", error);
+
+    // Handle stock validation errors specifically
+    if (error.message.includes("Stock validation failed")) {
+      try {
+        const stockError = JSON.parse(
+          error.message.replace("Stock validation failed: ", "")
+        );
+        return res.status(400).json({
+          success: false,
+          message: "Some items are out of stock or have insufficient inventory",
+          stockErrors: stockError,
+          error: "INSUFFICIENT_STOCK",
+        });
+      } catch (parseError) {
+        return res.status(400).json({
+          success: false,
+          message: "Stock validation failed",
+          error: error.message,
+        });
+      }
+    }
+
     res.status(500).json({
       success: false,
       message: "Failed to create order",
@@ -210,11 +249,11 @@ const getAllOrdersController = async (req, res) => {
   }
 };
 
-// Update order status
+// Update order status with stock management
 const updateOrderStatusController = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { status, adminNotes } = req.body;
+    const { status, adminNotes, useStockManagement = true } = req.body;
 
     if (!orderId || !status) {
       return res.status(400).json({
@@ -240,7 +279,10 @@ const updateOrderStatusController = async (req, res) => {
       });
     }
 
-    const order = await updateOrderStatus(orderId, status, adminNotes);
+    // Use stock management version by default
+    const order = useStockManagement
+      ? await updateOrderStatusWithStockManagement(orderId, status, adminNotes)
+      : await updateOrderStatus(orderId, status, adminNotes);
 
     res.status(200).json({
       success: true,
@@ -338,10 +380,11 @@ const updateTrackingNumberController = async (req, res) => {
   }
 };
 
-// Delete order (soft delete)
+// Delete order (soft delete) with stock restoration
 const deleteOrderController = async (req, res) => {
   try {
     const { orderId } = req.params;
+    const { useStockManagement = true } = req.query;
 
     if (!orderId) {
       return res.status(400).json({
@@ -350,7 +393,10 @@ const deleteOrderController = async (req, res) => {
       });
     }
 
-    const order = await deleteOrder(orderId);
+    // Use stock management version by default
+    const order = useStockManagement
+      ? await deleteOrderWithStockManagement(orderId)
+      : await deleteOrder(orderId);
 
     res.status(200).json({
       success: true,
@@ -388,6 +434,108 @@ const getOrderStatsController = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to retrieve order statistics",
+      error: error.message,
+    });
+  }
+};
+
+// ============================================
+// STOCK MANAGEMENT CONTROLLERS
+// ============================================
+
+// Check stock availability for items before order creation
+const checkStockController = async (req, res) => {
+  try {
+    const { items } = req.body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Items array is required",
+      });
+    }
+
+    // Validate items structure
+    for (const item of items) {
+      if (!item.productId || !item.size || !item.color || !item.quantity) {
+        return res.status(400).json({
+          success: false,
+          message: "Each item must have productId, size, color, and quantity",
+        });
+      }
+    }
+
+    const stockCheck = await checkStockAvailability(items);
+
+    res.status(200).json({
+      success: true,
+      message: "Stock availability checked successfully",
+      data: stockCheck,
+    });
+  } catch (error) {
+    console.error("Check stock error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to check stock availability",
+      error: error.message,
+    });
+  }
+};
+
+// Get low stock items (Admin)
+const getLowStockController = async (req, res) => {
+  try {
+    const { threshold = 5 } = req.query;
+
+    const lowStockItems = await getLowStockItems(parseInt(threshold));
+
+    res.status(200).json({
+      success: true,
+      message: "Low stock items retrieved successfully",
+      data: lowStockItems,
+      threshold: parseInt(threshold),
+    });
+  } catch (error) {
+    console.error("Get low stock error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve low stock items",
+      error: error.message,
+    });
+  }
+};
+
+// Get stock for specific product variant
+const getVariantStockController = async (req, res) => {
+  try {
+    const { productId, size, color } = req.params;
+
+    if (!productId || !size || !color) {
+      return res.status(400).json({
+        success: false,
+        message: "Product ID, size, and color are required",
+      });
+    }
+
+    const variantStock = await getProductVariantStock(productId, size, color);
+
+    if (!variantStock) {
+      return res.status(404).json({
+        success: false,
+        message: "Product variant not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Product variant stock retrieved successfully",
+      data: variantStock,
+    });
+  } catch (error) {
+    console.error("Get variant stock error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve variant stock",
       error: error.message,
     });
   }
@@ -606,6 +754,11 @@ export {
   updateTrackingNumberController,
   deleteOrderController,
   getOrderStatsController,
+
+  // Stock management controllers
+  checkStockController,
+  getLowStockController,
+  getVariantStockController,
 
   // Order item controllers
   createOrderItemController,
