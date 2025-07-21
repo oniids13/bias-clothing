@@ -100,7 +100,6 @@ const Header = ({ user, setUser }) => {
 
     try {
       const response = await cartApi.getCartItemCount();
-      console.log("Cart count response:", response); // Debug log
       if (response.success) {
         setCartItemCount(response.count || 0);
       } else {

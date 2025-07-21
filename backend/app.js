@@ -10,6 +10,7 @@ import userRoutes from "./router/userRoute.js";
 import productRoutes from "./router/productRoute.js";
 import galleryRoutes from "./router/galleryRoute.js";
 import cartRoutes from "./router/cartRoute.js";
+import orderRoutes from "./router/orderRoute.js";
 
 dotenv.config();
 
@@ -48,6 +49,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/product", productRoutes);
 app.use("/api/gallery", galleryRoutes);
 app.use("/api/cart", cartRoutes);
+app.use("/api/order", orderRoutes);
 
 // Basic route
 app.get("/", (req, res) => {
