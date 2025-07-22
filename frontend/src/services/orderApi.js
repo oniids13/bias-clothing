@@ -72,8 +72,69 @@ const checkStock = async (items) => {
   }
 };
 
+// Get user orders with pagination
+const getUserOrders = async (userId, options = {}) => {
+  try {
+    const { page = 1, limit = 10, status } = options;
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+
+    if (status) {
+      params.append("status", status);
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/order/user/${userId}?${params}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching user orders:", error);
+    throw error;
+  }
+};
+
+// Get single order details
+const getOrderById = async (orderId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/order/${orderId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching order details:", error);
+    throw error;
+  }
+};
+
 export const orderApi = {
   createAddress,
   createOrder,
   checkStock,
+  getUserOrders,
+  getOrderById,
 };

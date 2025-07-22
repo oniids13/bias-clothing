@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../App";
+import { orderApi } from "../services/orderApi";
 
 const Profile = () => {
   const { user, setUser } = useAuth();
@@ -12,6 +13,14 @@ const Profile = () => {
   const [editingPhone, setEditingPhone] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
   const [showAddAddress, setShowAddAddress] = useState(false);
+
+  // Order history states
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [ordersPagination, setOrdersPagination] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showOrderDetails, setShowOrderDetails] = useState(false);
 
   // Form states
   const [phoneForm, setPhoneForm] = useState("");
@@ -28,10 +37,72 @@ const Profile = () => {
   useEffect(() => {
     if (user) {
       fetchUserProfile();
+      fetchUserOrders();
     } else {
       setLoading(false);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchUserOrders();
+    }
+  }, [ordersPage, user]);
+
+  const fetchUserOrders = async () => {
+    if (!user?.id) return;
+
+    try {
+      setOrdersLoading(true);
+      const response = await orderApi.getUserOrders(user.id, {
+        page: ordersPage,
+        limit: 5,
+      });
+
+      if (response.success) {
+        setOrders(response.data);
+        setOrdersPagination(response.pagination);
+      }
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  const handleViewOrderDetails = async (orderId) => {
+    try {
+      const response = await orderApi.getOrderById(orderId);
+      if (response.success) {
+        setSelectedOrder(response.data);
+        setShowOrderDetails(true);
+      }
+    } catch (error) {
+      console.error("Error fetching order details:", error);
+      setError("Failed to load order details");
+    }
+  };
+
+  const getStatusColor = (status) => {
+    const statusColors = {
+      PENDING: "bg-yellow-100 text-yellow-800",
+      CONFIRMED: "bg-blue-100 text-blue-800",
+      PROCESSING: "bg-purple-100 text-purple-800",
+      SHIPPED: "bg-indigo-100 text-indigo-800",
+      DELIVERED: "bg-green-100 text-green-800",
+      CANCELLED: "bg-red-100 text-red-800",
+      RETURNED: "bg-gray-100 text-gray-800",
+    };
+    return statusColors[status] || "bg-gray-100 text-gray-800";
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
 
   const fetchUserProfile = async () => {
     try {
@@ -397,6 +468,144 @@ const Profile = () => {
               )}
             </div>
           </div>
+
+          {/* Order History */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900">
+                Order History
+              </h3>
+            </div>
+
+            {/* Order List */}
+            <div className="space-y-4">
+              {ordersLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-2"></div>
+                  <p className="text-gray-600">Loading orders...</p>
+                </div>
+              ) : orders.length > 0 ? (
+                <>
+                  {orders.map((order) => (
+                    <div
+                      key={order.id}
+                      className="p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <div className="flex items-center gap-3 mb-2">
+                            <h4 className="font-medium text-gray-900">
+                              Order #{order.orderNumber}
+                            </h4>
+                            <span
+                              className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
+                                order.status
+                              )}`}
+                            >
+                              {order.status}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600">
+                            Placed on {formatDate(order.createdAt)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-semibold text-gray-900">
+                            ₱{order.total.toFixed(2)}
+                          </p>
+                          <button
+                            onClick={() => handleViewOrderDetails(order.id)}
+                            className="text-blue-600 hover:text-blue-800 text-sm mt-1"
+                          >
+                            View Details
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Order Items Preview */}
+                      <div className="border-t pt-3">
+                        <div className="flex items-center gap-3">
+                          {order.items.slice(0, 3).map((item, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center gap-2"
+                            >
+                              {item.product?.imageUrl?.[0] && (
+                                <img
+                                  src={item.product.imageUrl[0]}
+                                  alt={item.productName}
+                                  className="w-10 h-10 object-cover rounded"
+                                />
+                              )}
+                              <div>
+                                <p className="text-sm font-medium text-gray-900 truncate max-w-32">
+                                  {item.productName}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {item.size} / {item.color} × {item.quantity}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                          {order.items.length > 3 && (
+                            <span className="text-sm text-gray-500">
+                              +{order.items.length - 3} more items
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Pagination */}
+                  {ordersPagination && ordersPagination.totalPages > 1 && (
+                    <div className="flex justify-center items-center gap-2 pt-4">
+                      <button
+                        onClick={() => setOrdersPage(ordersPage - 1)}
+                        disabled={!ordersPagination.hasPrevPage}
+                        className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        Previous
+                      </button>
+                      <span className="text-sm text-gray-600">
+                        Page {ordersPagination.currentPage} of{" "}
+                        {ordersPagination.totalPages}
+                      </span>
+                      <button
+                        onClick={() => setOrdersPage(ordersPage + 1)}
+                        disabled={!ordersPagination.hasNextPage}
+                        className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <div className="mb-4">
+                    <svg
+                      className="w-16 h-16 mx-auto text-gray-300"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1}
+                        d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                      />
+                    </svg>
+                  </div>
+                  <p className="text-lg font-medium mb-2">No orders yet</p>
+                  <p className="text-sm">
+                    When you place your first order, it will appear here.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -547,6 +756,153 @@ const Profile = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Order Details Modal */}
+      {showOrderDetails && selectedOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold">
+                Order #{selectedOrder.orderNumber}
+              </h3>
+              <button
+                onClick={() => setShowOrderDetails(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {/* Order Info */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <p className="text-sm text-gray-600">Order Date</p>
+                <p className="font-medium">
+                  {formatDate(selectedOrder.createdAt)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Status</p>
+                <span
+                  className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
+                    selectedOrder.status
+                  )}`}
+                >
+                  {selectedOrder.status}
+                </span>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Payment Method</p>
+                <p className="font-medium">{selectedOrder.paymentMethod}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Payment Status</p>
+                <p className="font-medium">{selectedOrder.paymentStatus}</p>
+              </div>
+            </div>
+
+            {/* Shipping Address */}
+            {selectedOrder.address && (
+              <div className="mb-6">
+                <h4 className="font-medium mb-2">Shipping Address</h4>
+                <div className="p-3 bg-gray-50 rounded text-sm">
+                  <div>{selectedOrder.address.street}</div>
+                  <div>{selectedOrder.address.barangay}</div>
+                  <div>
+                    {selectedOrder.address.city}, {selectedOrder.address.state}{" "}
+                    {selectedOrder.address.zipCode}
+                  </div>
+                  <div>{selectedOrder.address.country}</div>
+                </div>
+              </div>
+            )}
+
+            {/* Order Items */}
+            <div className="mb-6">
+              <h4 className="font-medium mb-3">Order Items</h4>
+              <div className="space-y-3">
+                {selectedOrder.items.map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 p-3 border border-gray-200 rounded"
+                  >
+                    {item.product?.imageUrl?.[0] && (
+                      <img
+                        src={item.product.imageUrl[0]}
+                        alt={item.productName}
+                        className="w-16 h-16 object-cover rounded"
+                      />
+                    )}
+                    <div className="flex-1">
+                      <h5 className="font-medium">{item.productName}</h5>
+                      <p className="text-sm text-gray-600">
+                        Size: {item.size} • Color: {item.color}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Quantity: {item.quantity}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">
+                        ₱{item.totalPrice.toFixed(2)}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        ₱{item.unitPrice.toFixed(2)} each
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Order Summary */}
+            <div className="border-t pt-4">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Subtotal:</span>
+                  <span>₱{selectedOrder.subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Shipping:</span>
+                  <span>₱{selectedOrder.shipping.toFixed(2)}</span>
+                </div>
+                {selectedOrder.discount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Discount:</span>
+                    <span>-₱{selectedOrder.discount.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-lg font-semibold border-t pt-2">
+                  <span>Total:</span>
+                  <span>₱{selectedOrder.total.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Customer Notes */}
+            {selectedOrder.customerNotes && (
+              <div className="mt-4">
+                <p className="text-sm text-gray-600 mb-1">Notes:</p>
+                <p className="text-sm bg-gray-50 p-2 rounded">
+                  {selectedOrder.customerNotes}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
