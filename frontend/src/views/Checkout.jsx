@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../App";
 import { cartApi } from "../services/cartApi";
+import { orderApi } from "../services/orderApi";
 import { useNavigate } from "react-router-dom";
 
 const Checkout = () => {
@@ -143,6 +144,7 @@ const Checkout = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setProcessing(true);
+    setError("");
 
     try {
       // Validate form
@@ -166,21 +168,151 @@ const Checkout = () => {
         return;
       }
 
-      // Process the order (this would typically call an API endpoint)
-      console.log("Order data:", {
-        contactInfo,
-        deliveryDetails,
-        paymentOption,
-        cartData,
-      });
+      // Debug cart data structure
+      console.log("Available Items from Cart:", availableItems);
+      console.log("Sample Cart Item Structure:", availableItems[0]);
 
-      // For now, just show success message
-      alert(
-        "Order placed successfully! (This is a demo - no actual payment processed)"
+      // Transform cart items to order items format
+      const orderItems = availableItems.map((item) => ({
+        productId: item.productId,
+        productName: item.product.name,
+        size: item.size,
+        color: item.color,
+        quantity: item.quantity,
+        unitPrice: item.product.price,
+      }));
+
+      console.log("Order Items for API:", orderItems);
+
+      // Check stock availability first
+      const stockCheckResponse = await orderApi.checkStock(orderItems);
+      console.log("Stock Check Response:", stockCheckResponse);
+
+      if (
+        !stockCheckResponse.success ||
+        !stockCheckResponse.data.allItemsAvailable
+      ) {
+        setError("Some items are out of stock. Please update your cart.");
+        console.log("Stock Issues:", stockCheckResponse.data.unavailableItems);
+        return;
+      }
+
+      // Create address for the order (only if not using saved address)
+      let addressId;
+
+      if (deliveryDetails.useSavedAddress) {
+        // If using saved address, we need to get the user's default address
+        try {
+          const userResponse = await fetch(
+            "http://localhost:3000/api/user/profile",
+            {
+              credentials: "include",
+            }
+          );
+
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            const defaultAddress = userData.user.addresses?.find(
+              (addr) => addr.isDefault
+            );
+
+            if (defaultAddress) {
+              addressId = defaultAddress.id;
+              console.log("Using saved address ID:", addressId);
+            } else {
+              setError(
+                "No default address found. Please add an address to your profile."
+              );
+              return;
+            }
+          } else {
+            setError("Failed to fetch user profile");
+            return;
+          }
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+          setError("Failed to fetch user profile");
+          return;
+        }
+      } else {
+        // Create new address
+        const addressData = {
+          street:
+            deliveryDetails.addressLine1 +
+            (deliveryDetails.addressLine2
+              ? `, ${deliveryDetails.addressLine2}`
+              : ""),
+          barangay: deliveryDetails.barangay,
+          city: deliveryDetails.city,
+          state: deliveryDetails.region,
+          zipCode: deliveryDetails.zipCode,
+          country: "Philippines",
+          isDefault: false, // Don't make this the default address
+        };
+
+        console.log("Creating new address:", addressData);
+        const addressResponse = await orderApi.createAddress(addressData);
+        console.log("Address Response:", addressResponse);
+
+        if (!addressResponse.success) {
+          setError("Failed to save delivery address");
+          return;
+        }
+
+        addressId = addressResponse.data.id;
+      }
+
+      // Calculate totals
+      const orderSubtotal = availableItems.reduce(
+        (sum, item) => sum + item.product.price * item.quantity,
+        0
       );
+      const shipping = 0; // Free shipping for now
+      const discount = 0; // No discount for now
+      const total = orderSubtotal + shipping - discount;
 
-      // Redirect to a success page or back to home
-      navigate("/");
+      // Prepare order data
+      const orderData = {
+        userId: user.id,
+        addressId: addressId,
+        subtotal: orderSubtotal,
+        shipping,
+        discount,
+        total,
+        paymentMethod: paymentOption.toUpperCase(),
+        paymentStatus: "PENDING",
+        customerNotes: `Customer: ${contactInfo.fullName}, Phone: ${contactInfo.contactNumber}`,
+        items: orderItems,
+      };
+
+      console.log("Creating Order:", orderData);
+
+      // Create the order
+      const orderResponse = await orderApi.createOrder(orderData);
+      console.log("Order Creation Response:", orderResponse);
+
+      if (orderResponse.success) {
+        console.log("Order created successfully:", orderResponse.data);
+
+        // Clear the cart after successful order
+        try {
+          await cartApi.clearCart();
+          console.log("Cart cleared successfully");
+        } catch (clearError) {
+          console.error("Failed to clear cart:", clearError);
+          // Don't fail the whole process if cart clear fails
+        }
+
+        // For now, just show success message
+        alert(
+          `Order created successfully! Order Number: ${orderResponse.data.orderNumber}`
+        );
+
+        // Redirect to a success page or back to home
+        navigate("/");
+      } else {
+        setError(orderResponse.message || "Failed to create order");
+      }
     } catch (error) {
       console.error("Error processing order:", error);
       setError("Failed to process order. Please try again.");
