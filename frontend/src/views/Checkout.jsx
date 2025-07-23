@@ -30,8 +30,17 @@ const Checkout = () => {
     region: "",
   });
 
-  const [paymentOption, setPaymentOption] = useState("cash");
+  const [paymentOption, setPaymentOption] = useState("gcash");
   const [processing, setProcessing] = useState(false);
+
+  // State for card details
+  const [cardDetails, setCardDetails] = useState({
+    cardNumber: "",
+    expiryMonth: "",
+    expiryYear: "",
+    cvv: "",
+    cardholderName: "",
+  });
 
   // Load cart data and populate user info when component mounts
   useEffect(() => {
@@ -139,6 +148,14 @@ const Checkout = () => {
 
   const handlePaymentOptionChange = (e) => {
     setPaymentOption(e.target.value);
+  };
+
+  const handleCardDetailsChange = (e) => {
+    const { name, value } = e.target;
+    setCardDetails((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -524,12 +541,12 @@ const Checkout = () => {
                   <input
                     type="radio"
                     name="paymentOption"
-                    value="cash"
-                    checked={paymentOption === "cash"}
+                    value="gcash"
+                    checked={paymentOption === "gcash"}
                     onChange={handlePaymentOptionChange}
                     className="w-4 h-4 text-black bg-gray-100 border-gray-300 focus:ring-black"
                   />
-                  <span className="text-gray-700">Cash</span>
+                  <span className="text-gray-700">Gcash</span>
                 </label>
                 <label className="flex items-center space-x-3">
                   <input
@@ -542,7 +559,104 @@ const Checkout = () => {
                   />
                   <span className="text-gray-700">Maya</span>
                 </label>
+                <label className="flex items-center space-x-3">
+                  <input
+                    type="radio"
+                    name="paymentOption"
+                    value="card"
+                    checked={paymentOption === "card"}
+                    onChange={handlePaymentOptionChange}
+                    className="w-4 h-4 text-black bg-gray-100 border-gray-300 focus:ring-black"
+                  />
+                  <span className="text-gray-700">Credit/Debit Card</span>
+                </label>
               </div>
+
+              {/* Card Details Form - Show only when card is selected */}
+              {paymentOption === "card" && (
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <h3 className="text-lg font-medium mb-4">Card Details</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <input
+                        type="text"
+                        name="cardholderName"
+                        value={cardDetails.cardholderName}
+                        onChange={handleCardDetailsChange}
+                        placeholder="Cardholder Name"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="text"
+                        name="cardNumber"
+                        value={cardDetails.cardNumber}
+                        onChange={handleCardDetailsChange}
+                        placeholder="Card Number"
+                        maxLength="19"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <select
+                          name="expiryMonth"
+                          value={cardDetails.expiryMonth}
+                          onChange={handleCardDetailsChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                          required
+                        >
+                          <option value="">Month</option>
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map(
+                            (month) => (
+                              <option
+                                key={month}
+                                value={month.toString().padStart(2, "0")}
+                              >
+                                {month.toString().padStart(2, "0")}
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </div>
+                      <div>
+                        <select
+                          name="expiryYear"
+                          value={cardDetails.expiryYear}
+                          onChange={handleCardDetailsChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                          required
+                        >
+                          <option value="">Year</option>
+                          {Array.from(
+                            { length: 10 },
+                            (_, i) => new Date().getFullYear() + i
+                          ).map((year) => (
+                            <option key={year} value={year}>
+                              {year}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <input
+                          type="text"
+                          name="cvv"
+                          value={cardDetails.cvv}
+                          onChange={handleCardDetailsChange}
+                          placeholder="CVV"
+                          maxLength="4"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Pay Now Button */}

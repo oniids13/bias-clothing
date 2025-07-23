@@ -350,16 +350,6 @@ const Cart = () => {
           </div>
         </div>
       )}
-
-      {/* Continue Shopping */}
-      <div className="mt-8 text-center">
-        <button
-          onClick={() => navigate("/shop")}
-          className="px-6 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
-        >
-          Continue Shopping
-        </button>
-      </div>
     </div>
   );
 };
