@@ -114,7 +114,15 @@ export const createPaymentMethod = async (cardDetails) => {
         data: {
           attributes: {
             type: "card",
-            details: cardDetails,
+            details: {
+              card_number: cardDetails.card_number,
+              exp_month: cardDetails.exp_month,
+              exp_year: cardDetails.exp_year,
+              cvc: cardDetails.cvc,
+              ...(cardDetails.cardholder_name && {
+                cardholder_name: cardDetails.cardholder_name,
+              }),
+            },
           },
         },
       }),
@@ -135,6 +143,50 @@ export const createPaymentMethod = async (cardDetails) => {
     };
   } catch (error) {
     console.error("Error creating payment method:", error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+};
+
+// Attach Payment Method to Payment Intent
+export const attachPaymentMethod = async (paymentIntentId, paymentMethodId) => {
+  try {
+    const response = await fetch(
+      `${PAYMONGO_BASE_URL}/payment_intents/${paymentIntentId}/attach`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: getAuthHeader(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          data: {
+            attributes: {
+              payment_method: paymentMethodId,
+              client_key: "", // This will be provided by frontend
+            },
+          },
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("PayMongo API Error:", data);
+      throw new Error(
+        data.errors?.[0]?.detail || "Failed to attach payment method"
+      );
+    }
+
+    return {
+      success: true,
+      data: data.data,
+    };
+  } catch (error) {
+    console.error("Error attaching payment method:", error);
     return {
       success: false,
       error: error.message,

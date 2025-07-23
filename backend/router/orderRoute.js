@@ -22,6 +22,14 @@ import {
   getOrderItemByIdController,
   updateOrderItemController,
   deleteOrderItemController,
+
+  // PayMongo integration controllers
+  createPaymentIntentController,
+  createPaymentMethodController,
+  getPaymentIntentController,
+  createOrderWithPaymentController,
+  handlePaymentSuccessController,
+  attachPaymentMethodController,
 } from "../controller/orderController.js";
 
 import { requireAuth } from "../middleware/auth.js";
@@ -98,5 +106,34 @@ router.patch("/items/:orderItemId", requireAuth, updateOrderItemController);
 
 // Delete order item (Protected - Admin only)
 router.delete("/items/:orderItemId", requireAuth, deleteOrderItemController);
+
+// ============================================
+// PAYMONGO INTEGRATION ROUTES
+// ============================================
+
+// Create PayMongo Payment Intent (Protected - User must be authenticated)
+router.post("/payment/intent", requireAuth, createPaymentIntentController);
+
+// Create PayMongo Payment Method for cards (Protected - User must be authenticated)
+router.post("/payment/method", requireAuth, createPaymentMethodController);
+
+// Attach Payment Method to Payment Intent (Protected - User must be authenticated)
+router.post("/payment/attach", requireAuth, attachPaymentMethodController);
+
+// Get Payment Intent status (Protected - User must be authenticated)
+router.get(
+  "/payment/intent/:paymentIntentId",
+  requireAuth,
+  getPaymentIntentController
+);
+
+// Create Order with PayMongo Payment Processing (Protected - User must be authenticated)
+router.post("/payment/create", requireAuth, createOrderWithPaymentController);
+
+// Handle Payment Success/Webhook (This might need to be unprotected for webhooks)
+router.post("/payment/success", handlePaymentSuccessController);
+
+// Handle Payment Success (Protected version for frontend callbacks)
+router.post("/payment/confirm", requireAuth, handlePaymentSuccessController);
 
 export default router;

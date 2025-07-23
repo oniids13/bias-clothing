@@ -23,6 +23,13 @@ import {
   getProductVariantStock,
 } from "../model/orderQueries.js";
 
+import {
+  createPaymentIntent,
+  createPaymentMethod,
+  getPaymentIntent,
+  attachPaymentMethod,
+} from "../services/paymongo.js";
+
 // ============================================
 // ORDER CONTROLLERS
 // ============================================
@@ -743,6 +750,473 @@ const deleteOrderItemController = async (req, res) => {
   }
 };
 
+// ============================================
+// PAYMONGO INTEGRATION CONTROLLERS
+// ============================================
+
+// Create PayMongo Payment Intent
+const createPaymentIntentController = async (req, res) => {
+  try {
+    const { total, customerName, customerEmail, orderNumber } = req.body;
+
+    if (!total || !customerName || !customerEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Total, customer name, and customer email are required",
+      });
+    }
+
+    const orderData = {
+      total,
+      customerName,
+      customerEmail,
+      orderNumber: orderNumber || `TEMP-${Date.now()}`,
+      orderId: null, // Will be set when order is created
+    };
+
+    const paymentIntentResponse = await createPaymentIntent(orderData);
+
+    if (!paymentIntentResponse.success) {
+      return res.status(400).json({
+        success: false,
+        message: "Failed to create payment intent",
+        error: paymentIntentResponse.error,
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Payment intent created successfully",
+      data: {
+        paymentIntentId: paymentIntentResponse.data.id,
+        clientKey: paymentIntentResponse.data.attributes.client_key,
+        amount: paymentIntentResponse.data.attributes.amount,
+        currency: paymentIntentResponse.data.attributes.currency,
+        status: paymentIntentResponse.data.attributes.status,
+      },
+    });
+  } catch (error) {
+    console.error("Create payment intent error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to create payment intent",
+      error: error.message,
+    });
+  }
+};
+
+// Create PayMongo Payment Method (for cards)
+const createPaymentMethodController = async (req, res) => {
+  try {
+    const { cardDetails } = req.body;
+
+    if (!cardDetails) {
+      return res.status(400).json({
+        success: false,
+        message: "Card details are required",
+      });
+    }
+
+    // Validate card details structure
+    const { card_number, exp_month, exp_year, cvc, cardholder_name } =
+      cardDetails;
+
+    if (!card_number || !exp_month || !exp_year || !cvc) {
+      return res.status(400).json({
+        success: false,
+        message: "Complete card details are required",
+      });
+    }
+
+    const paymentMethodResponse = await createPaymentMethod({
+      card_number,
+      exp_month: parseInt(exp_month),
+      exp_year: parseInt(exp_year),
+      cvc,
+      ...(cardholder_name && { cardholder_name }),
+    });
+
+    if (!paymentMethodResponse.success) {
+      return res.status(400).json({
+        success: false,
+        message: "Failed to create payment method",
+        error: paymentMethodResponse.error,
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Payment method created successfully",
+      data: {
+        paymentMethodId: paymentMethodResponse.data.id,
+        type: paymentMethodResponse.data.attributes.type,
+        details: paymentMethodResponse.data.attributes.details,
+      },
+    });
+  } catch (error) {
+    console.error("Create payment method error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to create payment method",
+      error: error.message,
+    });
+  }
+};
+
+// Get Payment Intent Status
+const getPaymentIntentController = async (req, res) => {
+  try {
+    const { paymentIntentId } = req.params;
+
+    if (!paymentIntentId) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment intent ID is required",
+      });
+    }
+
+    const paymentIntentResponse = await getPaymentIntent(paymentIntentId);
+
+    if (!paymentIntentResponse.success) {
+      return res.status(400).json({
+        success: false,
+        message: "Failed to retrieve payment intent",
+        error: paymentIntentResponse.error,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Payment intent retrieved successfully",
+      data: {
+        paymentIntentId: paymentIntentResponse.data.id,
+        status: paymentIntentResponse.data.attributes.status,
+        amount: paymentIntentResponse.data.attributes.amount,
+        currency: paymentIntentResponse.data.attributes.currency,
+        paymentMethod: paymentIntentResponse.data.attributes.payment_method,
+        metadata: paymentIntentResponse.data.attributes.metadata,
+      },
+    });
+  } catch (error) {
+    console.error("Get payment intent error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve payment intent",
+      error: error.message,
+    });
+  }
+};
+
+// Create Order with PayMongo Payment Processing
+const createOrderWithPaymentController = async (req, res) => {
+  try {
+    const {
+      userId,
+      addressId,
+      subtotal,
+      shipping = 0,
+      discount = 0,
+      total,
+      paymentMethod,
+      customerNotes,
+      items,
+      paymentDetails, // Contains payment method info for PayMongo
+    } = req.body;
+
+    // Validation
+    if (
+      !userId ||
+      !addressId ||
+      !subtotal ||
+      !total ||
+      !items ||
+      items.length === 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Missing required fields: userId, addressId, subtotal, total, and items are required",
+      });
+    }
+
+    if (!paymentMethod) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment method is required",
+      });
+    }
+
+    // Validate items structure
+    for (const item of items) {
+      if (
+        !item.productId ||
+        !item.productName ||
+        !item.size ||
+        !item.color ||
+        !item.quantity ||
+        !item.unitPrice
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Each item must have productId, productName, size, color, quantity, and unitPrice",
+        });
+      }
+      if (item.quantity <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Item quantities must be positive numbers",
+        });
+      }
+      item.totalPrice = item.quantity * item.unitPrice;
+    }
+
+    // Generate order number
+    const orderNumber = await generateOrderNumber();
+
+    // Get user info for payment intent
+    const userResponse = await fetch(`http://localhost:3000/api/user/profile`, {
+      headers: { "user-id": userId },
+    });
+
+    let customerName = "Customer";
+    let customerEmail = "customer@example.com";
+
+    if (userResponse.ok) {
+      const userData = await userResponse.json();
+      customerName = userData.user?.name || customerName;
+      customerEmail = userData.user?.email || customerEmail;
+    }
+
+    // Create payment intent with PayMongo
+    const paymentIntentData = {
+      total,
+      customerName,
+      customerEmail,
+      orderNumber,
+      orderId: null, // Will be updated after order creation
+    };
+
+    const paymentIntentResponse = await createPaymentIntent(paymentIntentData);
+
+    if (!paymentIntentResponse.success) {
+      return res.status(400).json({
+        success: false,
+        message: "Failed to create payment intent",
+        error: paymentIntentResponse.error,
+      });
+    }
+
+    const paymentIntentId = paymentIntentResponse.data.id;
+
+    // Create order data
+    const orderData = {
+      userId,
+      addressId,
+      orderNumber,
+      subtotal,
+      shipping,
+      discount,
+      total,
+      paymentMethod: paymentMethod.toUpperCase(),
+      paymentStatus: "PENDING",
+      paymentIntentId,
+      customerNotes,
+      items,
+    };
+
+    // Create order with stock management
+    const order = await createOrderWithStockManagement(orderData);
+
+    res.status(201).json({
+      success: true,
+      message: "Order created successfully with payment intent",
+      data: {
+        order,
+        payment: {
+          paymentIntentId: paymentIntentResponse.data.id,
+          clientKey: paymentIntentResponse.data.attributes.client_key,
+          status: paymentIntentResponse.data.attributes.status,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Create order with payment error:", error);
+
+    // Handle stock validation errors specifically
+    if (error.message.includes("Stock validation failed")) {
+      try {
+        const stockError = JSON.parse(
+          error.message.replace("Stock validation failed: ", "")
+        );
+        return res.status(400).json({
+          success: false,
+          message: "Some items are out of stock or have insufficient inventory",
+          stockErrors: stockError,
+          error: "INSUFFICIENT_STOCK",
+        });
+      } catch (parseError) {
+        return res.status(400).json({
+          success: false,
+          message: "Stock validation failed",
+          error: error.message,
+        });
+      }
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to create order with payment",
+      error: error.message,
+    });
+  }
+};
+
+// Handle Payment Success Webhook/Confirmation
+const handlePaymentSuccessController = async (req, res) => {
+  try {
+    const { paymentIntentId, orderId } = req.body;
+
+    if (!paymentIntentId) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment intent ID is required",
+      });
+    }
+
+    // Verify payment with PayMongo
+    const paymentIntentResponse = await getPaymentIntent(paymentIntentId);
+
+    if (!paymentIntentResponse.success) {
+      return res.status(400).json({
+        success: false,
+        message: "Failed to verify payment",
+        error: paymentIntentResponse.error,
+      });
+    }
+
+    const paymentStatus = paymentIntentResponse.data.attributes.status;
+
+    // Update order payment status based on PayMongo response
+    let newPaymentStatus = "PENDING";
+    let newOrderStatus = "PENDING";
+
+    switch (paymentStatus) {
+      case "succeeded":
+        newPaymentStatus = "PAID";
+        newOrderStatus = "CONFIRMED";
+        break;
+      case "processing":
+        newPaymentStatus = "PENDING";
+        newOrderStatus = "PENDING";
+        break;
+      case "requires_payment_method":
+      case "canceled":
+        newPaymentStatus = "FAILED";
+        newOrderStatus = "CANCELLED";
+        break;
+      default:
+        newPaymentStatus = "PENDING";
+    }
+
+    // Find order by payment intent ID if orderId not provided
+    let targetOrderId = orderId;
+    if (!targetOrderId) {
+      const orders = await getAllOrders({ limit: 100 });
+      const matchingOrder = orders.orders.find(
+        (order) => order.paymentIntentId === paymentIntentId
+      );
+      if (matchingOrder) {
+        targetOrderId = matchingOrder.id;
+      }
+    }
+
+    if (!targetOrderId) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found for payment intent",
+      });
+    }
+
+    // Update payment status
+    const updatedOrder = await updatePaymentStatus(
+      targetOrderId,
+      newPaymentStatus,
+      paymentIntentId
+    );
+
+    // Update order status if payment succeeded
+    if (newPaymentStatus === "PAID") {
+      await updateOrderStatus(targetOrderId, newOrderStatus);
+    } else if (newPaymentStatus === "FAILED") {
+      // Cancel order and restore stock if payment failed
+      await deleteOrderWithStockManagement(targetOrderId);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Payment status updated successfully",
+      data: {
+        orderId: targetOrderId,
+        paymentStatus: newPaymentStatus,
+        orderStatus: newOrderStatus,
+        paymentIntentStatus: paymentStatus,
+      },
+    });
+  } catch (error) {
+    console.error("Handle payment success error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to handle payment confirmation",
+      error: error.message,
+    });
+  }
+};
+
+// Attach Payment Method to Payment Intent
+const attachPaymentMethodController = async (req, res) => {
+  try {
+    const { paymentIntentId, paymentMethodId } = req.body;
+
+    if (!paymentIntentId || !paymentMethodId) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment intent ID and payment method ID are required",
+      });
+    }
+
+    const attachResponse = await attachPaymentMethod(
+      paymentIntentId,
+      paymentMethodId
+    );
+
+    if (!attachResponse.success) {
+      return res.status(400).json({
+        success: false,
+        message: "Failed to attach payment method",
+        error: attachResponse.error,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Payment method attached successfully",
+      data: {
+        paymentIntentId: attachResponse.data.id,
+        status: attachResponse.data.attributes.status,
+        paymentMethod: attachResponse.data.attributes.payment_method,
+      },
+    });
+  } catch (error) {
+    console.error("Attach payment method error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to attach payment method",
+      error: error.message,
+    });
+  }
+};
+
 export {
   // Order controllers
   createOrderController,
@@ -766,4 +1240,12 @@ export {
   getOrderItemByIdController,
   updateOrderItemController,
   deleteOrderItemController,
+
+  // PayMongo integration controllers
+  createPaymentIntentController,
+  createPaymentMethodController,
+  getPaymentIntentController,
+  createOrderWithPaymentController,
+  handlePaymentSuccessController,
+  attachPaymentMethodController,
 };
