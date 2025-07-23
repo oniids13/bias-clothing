@@ -33,24 +33,74 @@ const Checkout = () => {
   const [paymentOption, setPaymentOption] = useState("gcash");
   const [processing, setProcessing] = useState(false);
 
-  // State for card details
-  const [cardDetails, setCardDetails] = useState({
-    cardNumber: "",
-    expiryMonth: "",
-    expiryYear: "",
-    cvv: "",
-    cardholderName: "",
-  });
+  // State for payment success
+  const [paymentSuccessful, setPaymentSuccessful] = useState(false);
 
   // Load cart data and populate user info when component mounts
   useEffect(() => {
     if (user) {
       fetchCartData();
       populateUserInfo();
+
+      // Check for payment success from PayMongo redirect
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentSuccess = urlParams.get("success");
+      const paymentCancelled = urlParams.get("cancelled");
+
+      if (paymentSuccess === "true") {
+        handlePaymentSuccess();
+      } else if (paymentCancelled === "true") {
+        handlePaymentCancelled();
+      }
     } else {
       setLoading(false);
     }
   }, [user]);
+
+  // Handle payment success from PayMongo redirect
+  const handlePaymentSuccess = async () => {
+    try {
+      console.log("Payment successful, clearing cart...");
+      setProcessing(true);
+      setPaymentSuccessful(true);
+
+      // Clear the cart
+      await cartApi.clearCart();
+
+      // Show success message
+      setError("");
+
+      // Clean up URL parameters
+      const url = new URL(window.location);
+      url.searchParams.delete("success");
+      url.searchParams.delete("order_id");
+      window.history.replaceState({}, document.title, url.pathname);
+
+      // Redirect to home after a short delay
+      setTimeout(() => {
+        navigate("/");
+      }, 3000);
+    } catch (error) {
+      console.error("Error handling payment success:", error);
+      setError(
+        "Payment was successful, but there was an error clearing your cart. Please refresh the page."
+      );
+      setProcessing(false);
+    }
+  };
+
+  // Handle payment cancellation from PayMongo redirect
+  const handlePaymentCancelled = () => {
+    console.log("Payment was cancelled");
+
+    // Show cancellation message
+    setError("Payment was cancelled. You can try again.");
+
+    // Clean up URL parameters
+    const url = new URL(window.location);
+    url.searchParams.delete("cancelled");
+    window.history.replaceState({}, document.title, url.pathname);
+  };
 
   const fetchCartData = async () => {
     try {
@@ -150,14 +200,6 @@ const Checkout = () => {
     setPaymentOption(e.target.value);
   };
 
-  const handleCardDetailsChange = (e) => {
-    const { name, value } = e.target;
-    setCardDetails((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setProcessing(true);
@@ -184,10 +226,6 @@ const Checkout = () => {
         setError("Please fill in all delivery details");
         return;
       }
-
-      // Debug cart data structure
-      console.log("Available Items from Cart:", availableItems);
-      console.log("Sample Cart Item Structure:", availableItems[0]);
 
       // Transform cart items to order items format
       const orderItems = availableItems.map((item) => ({
@@ -288,53 +326,146 @@ const Checkout = () => {
       const discount = 0; // No discount for now
       const total = orderSubtotal + shipping - discount;
 
-      // Prepare order data
-      const orderData = {
-        userId: user.id,
-        addressId: addressId,
-        subtotal: orderSubtotal,
-        shipping,
-        discount,
-        total,
-        paymentMethod: paymentOption.toUpperCase(),
-        paymentStatus: "PENDING",
-        customerNotes: `Customer: ${contactInfo.fullName}, Phone: ${contactInfo.contactNumber}`,
-        items: orderItems,
-      };
-
-      console.log("Creating Order:", orderData);
-
-      // Create the order
-      const orderResponse = await orderApi.createOrder(orderData);
-      console.log("Order Creation Response:", orderResponse);
-
-      if (orderResponse.success) {
-        console.log("Order created successfully:", orderResponse.data);
-
-        // Clear the cart after successful order
-        try {
-          await cartApi.clearCart();
-          console.log("Cart cleared successfully");
-        } catch (clearError) {
-          console.error("Failed to clear cart:", clearError);
-          // Don't fail the whole process if cart clear fails
-        }
-
-        // For now, just show success message
-        alert(
-          `Order created successfully! Order Number: ${orderResponse.data.orderNumber}`
-        );
-
-        // Redirect to a success page or back to home
-        navigate("/");
+      // PayMongo Payment Processing
+      if (paymentOption === "card" || paymentOption === "gcash") {
+        await handlePayMongoPayment({
+          userId: user.id,
+          addressId,
+          subtotal: orderSubtotal,
+          shipping,
+          discount,
+          total,
+          paymentMethod: paymentOption,
+          customerNotes: `Customer: ${contactInfo.fullName}, Phone: ${contactInfo.contactNumber}`,
+          items: orderItems,
+        });
       } else {
-        setError(orderResponse.message || "Failed to create order");
+        // Fallback to direct order creation for other payment methods
+        await handleDirectOrderCreation({
+          userId: user.id,
+          addressId,
+          subtotal: orderSubtotal,
+          shipping,
+          discount,
+          total,
+          paymentMethod: paymentOption.toUpperCase(),
+          customerNotes: `Customer: ${contactInfo.fullName}, Phone: ${contactInfo.contactNumber}`,
+          items: orderItems,
+        });
       }
     } catch (error) {
       console.error("Error processing order:", error);
       setError("Failed to process order. Please try again.");
     } finally {
       setProcessing(false);
+    }
+  };
+
+  // Replace the handlePayMongoPayment function with this:
+  const handlePayMongoPayment = async (orderData) => {
+    try {
+      console.log("Processing PayMongo hosted checkout...");
+
+      // Create Checkout Session
+      const checkoutSessionData = {
+        total: orderData.total,
+        customerName: contactInfo.fullName,
+        customerEmail: contactInfo.email,
+        orderNumber: `ORD-${Date.now()}`, // Generate a temporary order number
+        items: orderData.items,
+        cancelUrl: `${window.location.origin}/checkout?cancelled=true`,
+        successUrl: `${window.location.origin}/checkout?success=true&order_id=${orderData.userId}`,
+        paymentMethods: [paymentOption], // Only the selected payment method
+      };
+
+      console.log("Creating checkout session:", checkoutSessionData);
+
+      const checkoutResponse = await orderApi.createCheckoutSession(
+        checkoutSessionData
+      );
+      console.log("Checkout Session Response:", checkoutResponse);
+      console.log("Checkout Response Data:", checkoutResponse.data);
+
+      if (!checkoutResponse.success) {
+        throw new Error(
+          checkoutResponse.message || "Failed to create checkout session"
+        );
+      }
+
+      const { checkoutUrl } = checkoutResponse.data;
+      console.log("Extracted checkout URL:", checkoutUrl);
+
+      if (!checkoutUrl) {
+        console.error("No checkout URL received from PayMongo!");
+        console.error(
+          "Full response:",
+          JSON.stringify(checkoutResponse, null, 2)
+        );
+        throw new Error("No checkout URL received from PayMongo");
+      }
+
+      // Create order in our database first
+      const orderResponse = await orderApi.createOrder({
+        ...orderData,
+        paymentStatus: "PENDING",
+        paymentIntentId: checkoutResponse.data.checkoutSessionId,
+      });
+
+      if (!orderResponse.success) {
+        throw new Error(orderResponse.message || "Failed to create order");
+      }
+
+      console.log("Order created, redirecting to PayMongo checkout...");
+
+      // Redirect to PayMongo hosted checkout
+      window.location.href = checkoutUrl;
+    } catch (error) {
+      console.error("PayMongo hosted checkout error:", error);
+      throw error;
+    }
+  };
+
+  // Handle direct order creation (fallback)
+  const handleDirectOrderCreation = async (orderData) => {
+    try {
+      console.log("Creating direct order...");
+
+      const orderResponse = await orderApi.createOrder(orderData);
+      console.log("Direct Order Response:", orderResponse);
+
+      if (orderResponse.success) {
+        await handleSuccessfulOrder(orderResponse.data);
+      } else {
+        throw new Error(orderResponse.message || "Failed to create order");
+      }
+    } catch (error) {
+      console.error("Direct order creation error:", error);
+      throw error;
+    }
+  };
+
+  // Handle successful order completion
+  const handleSuccessfulOrder = async (order) => {
+    try {
+      console.log("Order completed successfully:", order);
+
+      // Clear the cart after successful order
+      try {
+        await cartApi.clearCart();
+        console.log("Cart cleared successfully");
+      } catch (clearError) {
+        console.error("Failed to clear cart:", clearError);
+        // Don't fail the whole process if cart clear fails
+      }
+
+      // Show success message
+      alert(`Order created successfully! Order Number: ${order.orderNumber}`);
+
+      // Redirect to a success page or back to home
+      navigate("/");
+    } catch (error) {
+      console.error("Error handling successful order:", error);
+      // Don't throw here as the order was already created successfully
     }
   };
 
@@ -397,6 +528,16 @@ const Checkout = () => {
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
             {error}
+          </div>
+        )}
+
+        {paymentSuccessful && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
+            <div className="flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-700 mr-2"></div>
+              Payment successful! Your order has been placed. Redirecting to
+              home page...
+            </div>
           </div>
         )}
 
@@ -546,18 +687,7 @@ const Checkout = () => {
                     onChange={handlePaymentOptionChange}
                     className="w-4 h-4 text-black bg-gray-100 border-gray-300 focus:ring-black"
                   />
-                  <span className="text-gray-700">Gcash</span>
-                </label>
-                <label className="flex items-center space-x-3">
-                  <input
-                    type="radio"
-                    name="paymentOption"
-                    value="maya"
-                    checked={paymentOption === "maya"}
-                    onChange={handlePaymentOptionChange}
-                    className="w-4 h-4 text-black bg-gray-100 border-gray-300 focus:ring-black"
-                  />
-                  <span className="text-gray-700">Maya</span>
+                  <span className="text-gray-700">GCash</span>
                 </label>
                 <label className="flex items-center space-x-3">
                   <input
@@ -571,92 +701,6 @@ const Checkout = () => {
                   <span className="text-gray-700">Credit/Debit Card</span>
                 </label>
               </div>
-
-              {/* Card Details Form - Show only when card is selected */}
-              {paymentOption === "card" && (
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <h3 className="text-lg font-medium mb-4">Card Details</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <input
-                        type="text"
-                        name="cardholderName"
-                        value={cardDetails.cardholderName}
-                        onChange={handleCardDetailsChange}
-                        placeholder="Cardholder Name"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <input
-                        type="text"
-                        name="cardNumber"
-                        value={cardDetails.cardNumber}
-                        onChange={handleCardDetailsChange}
-                        placeholder="Card Number"
-                        maxLength="19"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                        required
-                      />
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <select
-                          name="expiryMonth"
-                          value={cardDetails.expiryMonth}
-                          onChange={handleCardDetailsChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                          required
-                        >
-                          <option value="">Month</option>
-                          {Array.from({ length: 12 }, (_, i) => i + 1).map(
-                            (month) => (
-                              <option
-                                key={month}
-                                value={month.toString().padStart(2, "0")}
-                              >
-                                {month.toString().padStart(2, "0")}
-                              </option>
-                            )
-                          )}
-                        </select>
-                      </div>
-                      <div>
-                        <select
-                          name="expiryYear"
-                          value={cardDetails.expiryYear}
-                          onChange={handleCardDetailsChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                          required
-                        >
-                          <option value="">Year</option>
-                          {Array.from(
-                            { length: 10 },
-                            (_, i) => new Date().getFullYear() + i
-                          ).map((year) => (
-                            <option key={year} value={year}>
-                              {year}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <input
-                          type="text"
-                          name="cvv"
-                          value={cardDetails.cvv}
-                          onChange={handleCardDetailsChange}
-                          placeholder="CVV"
-                          maxLength="4"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                          required
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Pay Now Button */}

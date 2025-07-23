@@ -131,10 +131,232 @@ const getOrderById = async (orderId) => {
   }
 };
 
+// ============================================
+// PAYMONGO INTEGRATION FUNCTIONS
+// ============================================
+
+// Create PayMongo Payment Intent
+const createPaymentIntent = async (paymentData) => {
+  try {
+    console.log("API Call - Payment Intent Data:", paymentData);
+
+    const response = await fetch(`${API_BASE_URL}/order/payment/intent`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(paymentData),
+    });
+
+    const data = await response.json();
+    console.log("API Response:", data);
+
+    if (!response.ok) {
+      console.error("API Error Response:", data);
+      throw new Error(data.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error creating payment intent:", error);
+    throw error;
+  }
+};
+
+// Create PayMongo Payment Method (for cards)
+const createPaymentMethod = async (cardDetails) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/order/payment/method`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ cardDetails }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error creating payment method:", error);
+    throw error;
+  }
+};
+
+// Attach Payment Method to Payment Intent
+const attachPaymentMethod = async (paymentIntentId, paymentMethodId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/order/payment/attach`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ paymentIntentId, paymentMethodId }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error attaching payment method:", error);
+    throw error;
+  }
+};
+
+// Get Payment Intent Status
+const getPaymentIntentStatus = async (paymentIntentId) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/order/payment/intent/${paymentIntentId}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error getting payment intent status:", error);
+    throw error;
+  }
+};
+
+// Create Order with PayMongo Payment Processing
+const createOrderWithPayment = async (orderData) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/order/payment/create`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(orderData),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error creating order with payment:", error);
+    throw error;
+  }
+};
+
+// Handle Payment Success Confirmation
+const confirmPayment = async (paymentIntentId, orderId = null) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/order/payment/confirm`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ paymentIntentId, orderId }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error confirming payment:", error);
+    throw error;
+  }
+};
+
+// Create PayMongo Checkout Session
+const createCheckoutSession = async (checkoutData) => {
+  try {
+    console.log("API Call - Checkout Session Data:", checkoutData);
+
+    const response = await fetch(`${API_BASE_URL}/order/payment/checkout`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(checkoutData),
+    });
+
+    const data = await response.json();
+    console.log("Checkout Session API Response:", data);
+
+    if (!response.ok) {
+      console.error("Checkout Session API Error Response:", data);
+      throw new Error(data.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error creating checkout session:", error);
+    throw error;
+  }
+};
+
+// Get Checkout Session Status
+const getCheckoutSessionStatus = async (checkoutSessionId) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/order/payment/checkout/${checkoutSessionId}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("Checkout Session Status API Error Response:", data);
+      throw new Error(data.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error getting checkout session status:", error);
+    throw error;
+  }
+};
+
 export const orderApi = {
   createAddress,
   createOrder,
   checkStock,
   getUserOrders,
   getOrderById,
+
+  // PayMongo integration
+  createPaymentIntent,
+  createPaymentMethod,
+  attachPaymentMethod,
+  getPaymentIntentStatus,
+  createOrderWithPayment,
+  confirmPayment,
+  createCheckoutSession,
+  getCheckoutSessionStatus,
 };

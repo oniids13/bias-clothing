@@ -30,6 +30,8 @@ import {
   createOrderWithPaymentController,
   handlePaymentSuccessController,
   attachPaymentMethodController,
+  createCheckoutSessionController,
+  getCheckoutSessionController,
 } from "../controller/orderController.js";
 
 import { requireAuth } from "../middleware/auth.js";
@@ -125,6 +127,16 @@ router.get(
   "/payment/intent/:paymentIntentId",
   requireAuth,
   getPaymentIntentController
+);
+
+// Create PayMongo Checkout Session (Protected - User must be authenticated)
+router.post("/payment/checkout", requireAuth, createCheckoutSessionController);
+
+// Get Checkout Session status (Protected - User must be authenticated)
+router.get(
+  "/payment/checkout/:checkoutSessionId",
+  requireAuth,
+  getCheckoutSessionController
 );
 
 // Create Order with PayMongo Payment Processing (Protected - User must be authenticated)

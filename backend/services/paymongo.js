@@ -16,32 +16,52 @@ const getAuthHeader = () => {
 // Create Payment Intent
 export const createPaymentIntent = async (orderData) => {
   try {
+    // Validate required fields
+    if (
+      !orderData.total ||
+      !orderData.customerName ||
+      !orderData.customerEmail
+    ) {
+      throw new Error(
+        "Missing required fields: total, customerName, customerEmail"
+      );
+    }
+
+    // Prepare metadata (only include non-null, non-undefined values)
+    const metadata = {
+      order_number: String(orderData.orderNumber || "TEMP"),
+      customer_email: String(orderData.customerEmail),
+    };
+
+    // Only add order_id if it exists and is not null
+    if (orderData.orderId) {
+      metadata.order_id = String(orderData.orderId);
+    }
+
+    const paymentIntentData = {
+      data: {
+        attributes: {
+          amount: Math.round(parseFloat(orderData.total) * 100), // Convert to centavos
+          payment_method_allowed: ["card", "gcash"],
+          currency: "PHP",
+          description: `Order ${orderData.orderNumber} - ${orderData.customerName}`,
+          metadata: metadata,
+        },
+      },
+    };
+
+    console.log(
+      "PayMongo Payment Intent Data:",
+      JSON.stringify(paymentIntentData, null, 2)
+    );
+
     const response = await fetch(`${PAYMONGO_BASE_URL}/payment_intents`, {
       method: "POST",
       headers: {
         Authorization: getAuthHeader(),
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        data: {
-          attributes: {
-            amount: Math.round(orderData.total * 100), // Convert to centavos
-            payment_method_allowed: ["card", "gcash", "grab_pay", "paymaya"],
-            payment_method_options: {
-              card: {
-                request_three_d_secure: "automatic",
-              },
-            },
-            currency: "PHP",
-            description: `Order ${orderData.orderNumber} - ${orderData.customerName}`,
-            metadata: {
-              order_id: orderData.orderId,
-              order_number: orderData.orderNumber,
-              customer_email: orderData.customerEmail,
-            },
-          },
-        },
-      }),
+      body: JSON.stringify(paymentIntentData),
     });
 
     const data = await response.json();
@@ -187,6 +207,146 @@ export const attachPaymentMethod = async (paymentIntentId, paymentMethodId) => {
     };
   } catch (error) {
     console.error("Error attaching payment method:", error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+};
+
+// Create Checkout Session (for hosted checkout)
+export const createCheckoutSession = async (orderData) => {
+  try {
+    // Validate required fields
+    if (
+      !orderData.total ||
+      !orderData.customerName ||
+      !orderData.customerEmail
+    ) {
+      throw new Error(
+        "Missing required fields: total, customerName, customerEmail"
+      );
+    }
+
+    // Prepare line items for checkout
+    const lineItems = orderData.items
+      ? orderData.items.map((item) => ({
+          currency: "PHP",
+          amount: Math.round(parseFloat(item.unitPrice) * 100), // Convert to centavos
+          description: `${item.productName} (${item.size}, ${item.color})`,
+          name: item.productName,
+          quantity: item.quantity,
+        }))
+      : [
+          {
+            currency: "PHP",
+            amount: Math.round(parseFloat(orderData.total) * 100),
+            description:
+              orderData.description || `Order ${orderData.orderNumber}`,
+            name: "Order Total",
+            quantity: 1,
+          },
+        ];
+
+    // Prepare metadata (only include non-null, non-undefined values)
+    const metadata = {
+      order_number: String(orderData.orderNumber || "TEMP"),
+      customer_email: String(orderData.customerEmail),
+    };
+
+    // Only add order_id if it exists and is not null
+    if (orderData.orderId) {
+      metadata.order_id = String(orderData.orderId);
+    }
+
+    const checkoutSessionData = {
+      data: {
+        attributes: {
+          billing: {
+            name: orderData.customerName,
+            email: orderData.customerEmail,
+          },
+          send_email_receipt: true,
+          show_description: true,
+          show_line_items: true,
+          cancel_url:
+            orderData.cancelUrl ||
+            "http://localhost:5173/checkout?cancelled=true",
+          success_url:
+            orderData.successUrl ||
+            "http://localhost:5173/checkout?success=true",
+          line_items: lineItems,
+          payment_method_types: orderData.paymentMethods || ["card", "gcash"],
+          description: `Order ${orderData.orderNumber} - ${orderData.customerName}`,
+          metadata: metadata,
+        },
+      },
+    };
+
+    console.log(
+      "PayMongo Checkout Session Data:",
+      JSON.stringify(checkoutSessionData, null, 2)
+    );
+
+    const response = await fetch(`${PAYMONGO_BASE_URL}/checkout_sessions`, {
+      method: "POST",
+      headers: {
+        Authorization: getAuthHeader(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(checkoutSessionData),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("PayMongo Checkout Session API Error:", data);
+      throw new Error(
+        data.errors?.[0]?.detail || "Failed to create checkout session"
+      );
+    }
+
+    return {
+      success: true,
+      data: data.data,
+    };
+  } catch (error) {
+    console.error("Error creating checkout session:", error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+};
+
+// Retrieve Checkout Session
+export const getCheckoutSession = async (checkoutSessionId) => {
+  try {
+    const response = await fetch(
+      `${PAYMONGO_BASE_URL}/checkout_sessions/${checkoutSessionId}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: getAuthHeader(),
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("PayMongo API Error:", data);
+      throw new Error(
+        data.errors?.[0]?.detail || "Failed to retrieve checkout session"
+      );
+    }
+
+    return {
+      success: true,
+      data: data.data,
+    };
+  } catch (error) {
+    console.error("Error retrieving checkout session:", error);
     return {
       success: false,
       error: error.message,

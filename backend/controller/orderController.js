@@ -28,6 +28,8 @@ import {
   createPaymentMethod,
   getPaymentIntent,
   attachPaymentMethod,
+  createCheckoutSession,
+  getCheckoutSession,
 } from "../services/paymongo.js";
 
 // ============================================
@@ -767,10 +769,10 @@ const createPaymentIntentController = async (req, res) => {
     }
 
     const orderData = {
-      total,
-      customerName,
-      customerEmail,
-      orderNumber: orderNumber || `TEMP-${Date.now()}`,
+      total: parseFloat(total),
+      customerName: String(customerName || ""),
+      customerEmail: String(customerEmail || ""),
+      orderNumber: String(orderNumber || `TEMP-${Date.now()}`),
       orderId: null, // Will be set when order is created
     };
 
@@ -1217,6 +1219,110 @@ const attachPaymentMethodController = async (req, res) => {
   }
 };
 
+// Create PayMongo Checkout Session (for hosted checkout)
+const createCheckoutSessionController = async (req, res) => {
+  try {
+    const {
+      total,
+      customerName,
+      customerEmail,
+      orderNumber,
+      items,
+      cancelUrl,
+      successUrl,
+      paymentMethods,
+    } = req.body;
+
+    if (!total || !customerName || !customerEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Total, customer name, and customer email are required",
+      });
+    }
+
+    const orderData = {
+      total,
+      customerName,
+      customerEmail,
+      orderNumber,
+      items,
+      cancelUrl,
+      successUrl,
+      paymentMethods,
+    };
+
+    const checkoutSessionResponse = await createCheckoutSession(orderData);
+
+    if (!checkoutSessionResponse.success) {
+      return res.status(400).json({
+        success: false,
+        message: "Failed to create checkout session",
+        error: checkoutSessionResponse.error,
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Checkout session created successfully",
+      data: {
+        checkoutSessionId: checkoutSessionResponse.data.id,
+        checkoutUrl: checkoutSessionResponse.data.attributes.checkout_url,
+        status: checkoutSessionResponse.data.attributes.status,
+      },
+    });
+  } catch (error) {
+    console.error("Create checkout session error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to create checkout session",
+      error: error.message,
+    });
+  }
+};
+
+// Retrieve Checkout Session
+const getCheckoutSessionController = async (req, res) => {
+  try {
+    const { checkoutSessionId } = req.params;
+
+    if (!checkoutSessionId) {
+      return res.status(400).json({
+        success: false,
+        message: "Checkout session ID is required",
+      });
+    }
+
+    const checkoutSessionResponse = await getCheckoutSession(checkoutSessionId);
+
+    if (!checkoutSessionResponse.success) {
+      return res.status(400).json({
+        success: false,
+        message: "Failed to retrieve checkout session",
+        error: checkoutSessionResponse.error,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Checkout session retrieved successfully",
+      data: {
+        checkoutSessionId: checkoutSessionResponse.data.id,
+        status: checkoutSessionResponse.data.attributes.status,
+        checkoutUrl: checkoutSessionResponse.data.attributes.checkout_url,
+        paymentIntent: checkoutSessionResponse.data.attributes.payment_intent,
+        metadata: checkoutSessionResponse.data.attributes.metadata,
+      },
+    });
+  } catch (error) {
+    console.error("Get checkout session error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve checkout session",
+      error: error.message,
+    });
+  }
+};
+
 export {
   // Order controllers
   createOrderController,
@@ -1248,4 +1354,6 @@ export {
   createOrderWithPaymentController,
   handlePaymentSuccessController,
   attachPaymentMethodController,
+  createCheckoutSessionController,
+  getCheckoutSessionController,
 };
