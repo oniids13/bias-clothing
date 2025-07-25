@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../App";
+import Unauthorized from "../views/Unauthorized";
 
 const ProtectedRoute = ({ children }) => {
   const { user, setUser } = useAuth();
@@ -95,6 +96,66 @@ const ProtectedRoute = ({ children }) => {
   }
 
   // If user is authenticated, render the protected component
+  return children;
+};
+
+// Admin Protected Route Component
+export const AdminProtectedRoute = ({ children }) => {
+  const { user, setUser } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Only check auth if we don't already have user data
+    if (!user) {
+      checkUserAuth();
+    } else {
+      setIsLoading(false);
+    }
+  }, [user]);
+
+  const checkUserAuth = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/auth/user", {
+        credentials: "include",
+        cache: "no-cache",
+        headers: {
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+        },
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      console.error("Error checking authentication:", error);
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Show loading spinner while checking authentication
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking authorization...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is not authenticated or not an admin, show unauthorized page
+  if (!user || user.role !== "ADMIN") {
+    return <Unauthorized />;
+  }
+
+  // If user is authenticated and is an admin, render the protected component
   return children;
 };
 

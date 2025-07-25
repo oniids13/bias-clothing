@@ -36,9 +36,15 @@ const Login = () => {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Login successful - update global user state and redirect
+        // Login successful - update global user state
         setUser(data.user);
-        navigate("/");
+
+        // Check if user is admin and redirect accordingly
+        if (data.user.role === "ADMIN") {
+          navigate("/admin");
+        } else {
+          navigate("/");
+        }
       } else {
         // Login failed - show error message
         setError(data.message || "Login failed. Please try again.");

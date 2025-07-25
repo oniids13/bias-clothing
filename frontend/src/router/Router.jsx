@@ -5,7 +5,9 @@ import {
 } from "react-router-dom";
 import App from "../App";
 import ErrorPage from "../views/ErrorPage";
-import ProtectedRoute from "../components/ProtectedRoute";
+import ProtectedRoute, {
+  AdminProtectedRoute,
+} from "../components/ProtectedRoute";
 
 // Pages
 import Home from "../views/Home";
@@ -17,6 +19,9 @@ import Login from "../views/Login";
 import Register from "../views/Register";
 import SingleProduct from "../views/SingleProduct";
 import Checkout from "../views/Checkout";
+
+// Admin module
+import Admin from "../admin module/Admin";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -35,6 +40,14 @@ const router = createBrowserRouter(
           <ProtectedRoute>
             <Profile />
           </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <AdminProtectedRoute>
+            <Admin />
+          </AdminProtectedRoute>
         }
       />
     </Route>
