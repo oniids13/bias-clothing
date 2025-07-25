@@ -143,6 +143,24 @@ const Admin = () => {
     return "text-gray-600";
   };
 
+  const formatActivityTime = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+
+    if (diffInSeconds < 60) {
+      return `${diffInSeconds}s ago`;
+    } else if (diffInSeconds < 3600) {
+      return `${Math.floor(diffInSeconds / 60)}m ago`;
+    } else if (diffInSeconds < 86400) {
+      return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    } else if (diffInSeconds < 604800) {
+      return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
@@ -308,15 +326,23 @@ const Admin = () => {
 
         {/* Recent Activity */}
         <div className="bg-white rounded-2xl shadow-xl p-8 mt-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            Recent Activity
-          </h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">
+              Recent Activity
+            </h2>
+            <button
+              onClick={fetchAdminData}
+              className="text-sm text-blue-600 hover:text-blue-700 transition-colors"
+            >
+              Refresh
+            </button>
+          </div>
           <div className="space-y-4">
             {recentActivity.length > 0 ? (
               recentActivity.map((activity, index) => (
                 <div
                   key={index}
-                  className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg"
+                  className="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   <div
                     className={`${
@@ -325,7 +351,7 @@ const Admin = () => {
                         : activity.type === "user"
                         ? "bg-blue-100"
                         : "bg-purple-100"
-                    } p-2 rounded-full`}
+                    } p-2 rounded-full flex-shrink-0`}
                   >
                     {activity.type === "order" && (
                       <ShoppingCartIcon className="h-5 w-5 text-green-600" />
@@ -337,19 +363,32 @@ const Admin = () => {
                       <InventoryIcon className="h-5 w-5 text-purple-600" />
                     )}
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 leading-relaxed">
                       {activity.message}
                     </p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(activity.timestamp).toLocaleString()}
-                    </p>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-xs text-gray-500">
+                        {formatActivityTime(activity.timestamp)}
+                      </p>
+                      {activity.type === "order" && activity.details?.total && (
+                        <span className="text-xs font-medium text-green-600">
+                          {formatCurrency(activity.details.total)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No recent activity to display</p>
+              <div className="text-center py-12">
+                <div className="bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                  <BarChartIcon className="h-8 w-8 text-gray-400" />
+                </div>
+                <p className="text-gray-500 font-medium">No recent activity</p>
+                <p className="text-gray-400 text-sm mt-1">
+                  Activity will appear here as your business grows
+                </p>
               </div>
             )}
           </div>
