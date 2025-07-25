@@ -250,6 +250,161 @@ const setDefaultAddress = async (addressId, userId) => {
   }
 };
 
+// Admin-specific user queries
+const getUserCount = async (options = {}) => {
+  try {
+    const { role, excludeRole } = options;
+    const where = {};
+
+    if (role) {
+      where.role = role;
+    }
+
+    if (excludeRole) {
+      where.role = { not: excludeRole };
+    }
+
+    const count = await prisma.user.count({ where });
+    return count;
+  } catch (error) {
+    console.error("Error getting user count:", error);
+    throw error;
+  }
+};
+
+const getAllUsers = async (options = {}) => {
+  try {
+    const { page = 1, limit = 20, role, search } = options;
+    const skip = (page - 1) * limit;
+
+    const where = {};
+    if (role) {
+      where.role = role;
+    }
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    const [users, totalCount] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          phone: true,
+          avatar: true,
+          createdAt: true,
+          _count: {
+            select: {
+              orders: true,
+            },
+          },
+        },
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    return {
+      users,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalCount / limit),
+        totalCount,
+        hasNextPage: page < Math.ceil(totalCount / limit),
+        hasPrevPage: page > 1,
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching all users:", error);
+    throw error;
+  }
+};
+
+const getUserStats = async (dateRange = {}) => {
+  try {
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const previousMonthStart = new Date(
+      now.getFullYear(),
+      now.getMonth() - 1,
+      1
+    );
+    const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    const [
+      totalUsers,
+      totalCustomers,
+      totalAdmins,
+      recentUsers,
+      currentMonthUsers,
+      previousMonthUsers,
+    ] = await Promise.all([
+      prisma.user.count(),
+      prisma.user.count({ where: { role: "CUSTOMER" } }),
+      prisma.user.count({ where: { role: "ADMIN" } }),
+      prisma.user.findMany({
+        take: 5,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          createdAt: true,
+        },
+      }),
+      // Current month users
+      prisma.user.count({
+        where: {
+          role: "CUSTOMER",
+          createdAt: {
+            gte: currentMonthStart,
+          },
+        },
+      }),
+      // Previous month users
+      prisma.user.count({
+        where: {
+          role: "CUSTOMER",
+          createdAt: {
+            gte: previousMonthStart,
+            lte: previousMonthEnd,
+          },
+        },
+      }),
+    ]);
+
+    // Calculate growth percentage
+    const userGrowthPercentage =
+      previousMonthUsers > 0
+        ? ((currentMonthUsers - previousMonthUsers) / previousMonthUsers) * 100
+        : currentMonthUsers > 0
+        ? 100
+        : 0;
+
+    return {
+      totalUsers,
+      totalCustomers,
+      totalAdmins,
+      recentUsers,
+      currentMonthUsers,
+      previousMonthUsers,
+      userGrowthPercentage: Math.round(userGrowthPercentage * 100) / 100, // Round to 2 decimal places
+    };
+  } catch (error) {
+    console.error("Error fetching user stats:", error);
+    throw error;
+  }
+};
+
 export {
   createUser,
   getUserLogin,
@@ -259,4 +414,8 @@ export {
   updateAddress,
   deleteAddress,
   setDefaultAddress,
+  // Admin functions
+  getUserCount,
+  getAllUsers,
+  getUserStats,
 };

@@ -11,6 +11,7 @@ import productRoutes from "./router/productRoute.js";
 import galleryRoutes from "./router/galleryRoute.js";
 import cartRoutes from "./router/cartRoute.js";
 import orderRoutes from "./router/orderRoute.js";
+import adminRoutes from "./router/adminRoute.js";
 
 dotenv.config();
 
@@ -50,6 +51,7 @@ app.use("/api/product", productRoutes);
 app.use("/api/gallery", galleryRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/order", orderRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Basic route
 app.get("/", (req, res) => {

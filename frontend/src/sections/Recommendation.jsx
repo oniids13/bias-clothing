@@ -3,7 +3,6 @@ import ProductCard from "../components/ProductCard";
 
 const Recommendation = () => {
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   // Number of products to show per view on different screen sizes
@@ -33,13 +32,19 @@ const Recommendation = () => {
           "http://localhost:3000/api/product/active"
         );
         const data = await response.json();
-        // Limit to 8 products for recommendations (they're already active from the endpoint)
-        const recommendedProducts = data.slice(0, 8);
-        setProducts(recommendedProducts);
+
+        if (response.ok && data.success && data.data) {
+          // Handle new structured response format
+          // Limit to 8 products for recommendations (they're already active from the endpoint)
+          const recommendedProducts = data.data.slice(0, 8);
+          setProducts(recommendedProducts);
+        } else {
+          console.error("Failed to fetch products:", data.message);
+          setProducts([]);
+        }
       } catch (error) {
         console.error("Error fetching products:", error);
-      } finally {
-        setLoading(false);
+        setProducts([]);
       }
     };
 
@@ -62,35 +67,6 @@ const Recommendation = () => {
 
   const canGoNext = currentIndex + productsPerView < products.length;
   const canGoPrev = currentIndex > 0;
-
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">
-          You might also like
-        </h2>
-        <div className="flex gap-4 overflow-hidden">
-          {[...Array(4)].map((_, index) => (
-            <div
-              key={index}
-              className="flex-shrink-0 w-64 h-40 bg-gray-200 rounded-2xl animate-pulse"
-            ></div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (products.length === 0) {
-    return (
-      <div className="container mx-auto px-4 py-8 text-center">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">
-          You might also like
-        </h2>
-        <p className="text-gray-600">No recommended products available.</p>
-      </div>
-    );
-  }
 
   return (
     <div className="container mx-auto px-4 py-8 text-center">

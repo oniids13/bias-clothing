@@ -1,4 +1,6 @@
+import { useState, useEffect } from "react";
 import { useAuth } from "../App";
+import { adminApi } from "../services/adminApi";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import PeopleIcon from "@mui/icons-material/People";
 import InventoryIcon from "@mui/icons-material/Inventory";
@@ -9,6 +11,21 @@ import SettingsIcon from "@mui/icons-material/Settings";
 
 const Admin = () => {
   const { user } = useAuth();
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalProducts: 0,
+    totalOrders: 0,
+    totalRevenue: 0,
+  });
+  const [growthData, setGrowthData] = useState({
+    users: 0,
+    products: 0,
+    orders: 0,
+    revenue: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [recentActivity, setRecentActivity] = useState([]);
 
   const adminFeatures = [
     {
@@ -55,6 +72,105 @@ const Admin = () => {
     },
   ];
 
+  useEffect(() => {
+    fetchAdminData();
+  }, []);
+
+  const fetchAdminData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch complete admin statistics with growth data
+      const [completeStatsResult, activityResult] = await Promise.all([
+        adminApi.getCompleteAdminStats(),
+        adminApi.getRecentActivity(3),
+      ]);
+
+      if (completeStatsResult.success) {
+        const data = completeStatsResult.data;
+
+        // Update stats
+        setStats({
+          totalUsers: data.users.customers || 0,
+          totalProducts: data.products.total || 0,
+          totalOrders: data.orders.totalOrders || 0,
+          totalRevenue: data.orders.totalRevenue || 0,
+        });
+
+        // Update growth data with real percentages
+        setGrowthData({
+          users: data.users.growthPercentage || 0,
+          products: data.products.growthPercentage || 0,
+          orders: data.orders.growthPercentage || 0,
+          revenue: data.orders.revenueGrowthPercentage || 0,
+        });
+      }
+
+      // Update recent activity
+      if (activityResult.success) {
+        setRecentActivity(activityResult.data);
+      }
+    } catch (error) {
+      console.error("Error fetching admin data:", error);
+      setError("Failed to load admin data. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const formatNumber = (num) => {
+    return new Intl.NumberFormat().format(num);
+  };
+
+  const formatGrowthPercentage = (percentage) => {
+    const sign = percentage >= 0 ? "+" : "";
+    return `${sign}${percentage.toFixed(1)}%`;
+  };
+
+  const getGrowthColor = (percentage) => {
+    if (percentage > 0) return "text-green-600";
+    if (percentage < 0) return "text-red-600";
+    return "text-gray-600";
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading admin dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="bg-red-100 p-4 rounded-lg mb-4">
+            <p className="text-red-700">{error}</p>
+          </div>
+          <button
+            onClick={fetchAdminData}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="container mx-auto px-4 py-8">
@@ -77,8 +193,13 @@ const Admin = () => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <SettingsIcon className="h-6 w-6 text-gray-500" />
-              <span className="text-sm text-gray-500">Settings</span>
+              <button
+                onClick={fetchAdminData}
+                className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <SettingsIcon className="h-6 w-6" />
+                <span className="text-sm">Refresh</span>
+              </button>
             </div>
           </div>
         </div>
@@ -89,11 +210,15 @@ const Admin = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Users</p>
-                <p className="text-2xl font-bold text-gray-900">1,234</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatNumber(stats.totalUsers)}
+                </p>
               </div>
               <PeopleIcon className="h-8 w-8 text-blue-500" />
             </div>
-            <p className="text-xs text-green-600 mt-2">+12% from last month</p>
+            <p className={`text-xs mt-2 ${getGrowthColor(growthData.users)}`}>
+              {formatGrowthPercentage(growthData.users)} from last month
+            </p>
           </div>
 
           <div className="bg-white rounded-lg shadow-md p-6">
@@ -102,11 +227,17 @@ const Admin = () => {
                 <p className="text-sm font-medium text-gray-600">
                   Total Products
                 </p>
-                <p className="text-2xl font-bold text-gray-900">156</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatNumber(stats.totalProducts)}
+                </p>
               </div>
               <InventoryIcon className="h-8 w-8 text-purple-500" />
             </div>
-            <p className="text-xs text-green-600 mt-2">+5% from last month</p>
+            <p
+              className={`text-xs mt-2 ${getGrowthColor(growthData.products)}`}
+            >
+              {formatGrowthPercentage(growthData.products)} from last month
+            </p>
           </div>
 
           <div className="bg-white rounded-lg shadow-md p-6">
@@ -115,22 +246,30 @@ const Admin = () => {
                 <p className="text-sm font-medium text-gray-600">
                   Total Orders
                 </p>
-                <p className="text-2xl font-bold text-gray-900">2,468</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatNumber(stats.totalOrders)}
+                </p>
               </div>
               <ShoppingCartIcon className="h-8 w-8 text-orange-500" />
             </div>
-            <p className="text-xs text-green-600 mt-2">+18% from last month</p>
+            <p className={`text-xs mt-2 ${getGrowthColor(growthData.orders)}`}>
+              {formatGrowthPercentage(growthData.orders)} from last month
+            </p>
           </div>
 
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Revenue</p>
-                <p className="text-2xl font-bold text-gray-900">₱124,567</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatCurrency(stats.totalRevenue)}
+                </p>
               </div>
               <BarChartIcon className="h-8 w-8 text-green-500" />
             </div>
-            <p className="text-xs text-green-600 mt-2">+23% from last month</p>
+            <p className={`text-xs mt-2 ${getGrowthColor(growthData.revenue)}`}>
+              {formatGrowthPercentage(growthData.revenue)} from last month
+            </p>
           </div>
         </div>
 
@@ -172,41 +311,46 @@ const Admin = () => {
             Recent Activity
           </h2>
           <div className="space-y-4">
-            <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
-              <div className="bg-green-100 p-2 rounded-full">
-                <ShoppingCartIcon className="h-5 w-5 text-green-600" />
+            {recentActivity.length > 0 ? (
+              recentActivity.map((activity, index) => (
+                <div
+                  key={index}
+                  className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg"
+                >
+                  <div
+                    className={`${
+                      activity.type === "order"
+                        ? "bg-green-100"
+                        : activity.type === "user"
+                        ? "bg-blue-100"
+                        : "bg-purple-100"
+                    } p-2 rounded-full`}
+                  >
+                    {activity.type === "order" && (
+                      <ShoppingCartIcon className="h-5 w-5 text-green-600" />
+                    )}
+                    {activity.type === "user" && (
+                      <PeopleIcon className="h-5 w-5 text-blue-600" />
+                    )}
+                    {activity.type === "product" && (
+                      <InventoryIcon className="h-5 w-5 text-purple-600" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">
+                      {activity.message}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(activity.timestamp).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No recent activity to display</p>
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">
-                  New order #ORD-2024-001 received
-                </p>
-                <p className="text-xs text-gray-500">2 minutes ago</p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
-              <div className="bg-blue-100 p-2 rounded-full">
-                <PeopleIcon className="h-5 w-5 text-blue-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">
-                  New customer registration
-                </p>
-                <p className="text-xs text-gray-500">5 minutes ago</p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
-              <div className="bg-purple-100 p-2 rounded-full">
-                <InventoryIcon className="h-5 w-5 text-purple-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">
-                  Product inventory updated
-                </p>
-                <p className="text-xs text-gray-500">10 minutes ago</p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

@@ -9,54 +9,103 @@ import {
   getAvailableColorsForSize,
   getAvailableSizesForColor,
   getVariantStock,
+  // Admin functions
+  getProductCount,
+  getProductStats,
+  getAllProductsForAdmin,
 } from "../model/productQueries.js";
 
-const getActiveProductsController = async (req, res) => {
-  try {
-    const products = await getActiveProducts();
-    res.status(200).json(products);
-  } catch (error) {
-    res.status(500).json({ message: "Error fetching active products" });
-  }
-};
-
-const getInactiveProductsController = async (req, res) => {
+const getAllProductsController = async (req, res) => {
   try {
     const products = await getAllProducts();
-    const inactiveProducts = products.filter((product) => !product.isActive);
-    res.status(200).json(inactiveProducts);
+    res.status(200).json({
+      success: true,
+      message: "Products retrieved successfully",
+      data: products,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching inactive products" });
+    console.error("Error fetching products:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching products",
+    });
   }
 };
 
 const getFeaturedProductsController = async (req, res) => {
   try {
     const products = await getFeaturedProducts();
-    res.status(200).json(products);
+    res.status(200).json({
+      success: true,
+      message: "Featured products retrieved successfully",
+      data: products,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching featured products" });
+    console.error("Error fetching featured products:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching featured products",
+    });
   }
 };
 
 const getNewProductsController = async (req, res) => {
   try {
     const products = await getNewProducts();
-    res.status(200).json(products);
+    res.status(200).json({
+      success: true,
+      message: "New products retrieved successfully",
+      data: products,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching new products" });
+    console.error("Error fetching new products:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching new products",
+    });
+  }
+};
+
+const getActiveProductsController = async (req, res) => {
+  try {
+    const products = await getActiveProducts();
+    res.status(200).json({
+      success: true,
+      message: "Active products retrieved successfully",
+      data: products,
+    });
+  } catch (error) {
+    console.error("Error fetching active products:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching active products",
+    });
   }
 };
 
 const getSingleProductController = async (req, res) => {
   try {
-    const product = await getSingleProduct(req.params.slug);
+    const { slug } = req.params;
+    const product = await getSingleProduct(slug);
+
     if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
     }
-    res.status(200).json(product);
+
+    res.status(200).json({
+      success: true,
+      message: "Product retrieved successfully",
+      data: product,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching single product" });
+    console.error("Error fetching single product:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching product",
+    });
   }
 };
 
@@ -162,11 +211,91 @@ const checkVariantAvailabilityController = async (req, res) => {
   }
 };
 
+// Admin Controllers
+const getProductCountController = async (req, res) => {
+  try {
+    const { isActive, category } = req.query;
+
+    const options = {};
+    if (isActive !== undefined) {
+      options.isActive = isActive === "true";
+    }
+    if (category) {
+      options.category = category;
+    }
+
+    const count = await getProductCount(options);
+
+    res.status(200).json({
+      success: true,
+      message: "Product count retrieved successfully",
+      count,
+      data: { productCount: count },
+    });
+  } catch (error) {
+    console.error("Error fetching product count:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching product count",
+    });
+  }
+};
+
+const getProductStatsController = async (req, res) => {
+  try {
+    const stats = await getProductStats();
+
+    res.status(200).json({
+      success: true,
+      message: "Product statistics retrieved successfully",
+      data: stats,
+    });
+  } catch (error) {
+    console.error("Error fetching product statistics:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching product statistics",
+    });
+  }
+};
+
+const getAllProductsForAdminController = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, category, isActive, search } = req.query;
+
+    const options = {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      category,
+      search,
+    };
+
+    if (isActive !== undefined) {
+      options.isActive = isActive === "true";
+    }
+
+    const result = await getAllProductsForAdmin(options);
+
+    res.status(200).json({
+      success: true,
+      message: "Products retrieved successfully",
+      data: result.products,
+      pagination: result.pagination,
+    });
+  } catch (error) {
+    console.error("Error fetching products for admin:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching products",
+    });
+  }
+};
+
 export {
-  getActiveProductsController,
-  getInactiveProductsController,
+  getAllProductsController,
   getFeaturedProductsController,
   getNewProductsController,
+  getActiveProductsController,
   getSingleProductController,
   getProductColorsController,
   getProductSizesController,
@@ -175,4 +304,8 @@ export {
   getVariantStockController,
   getProductVariantOptionsController,
   checkVariantAvailabilityController,
+  // Admin controllers
+  getProductCountController,
+  getProductStatsController,
+  getAllProductsForAdminController,
 };

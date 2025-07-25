@@ -500,29 +500,103 @@ const getOrderStats = async (dateRange = {}) => {
       };
     }
 
-    const [totalOrders, totalRevenue, statusCounts, recentOrders] =
-      await Promise.all([
-        prisma.order.count({ where }),
-        prisma.order.aggregate({
-          where: { ...where, status: { not: "CANCELLED" } },
-          _sum: { total: true },
-        }),
-        prisma.order.groupBy({
-          by: ["status"],
-          where,
-          _count: { status: true },
-        }),
-        prisma.order.findMany({
-          where,
-          take: 5,
-          orderBy: { createdAt: "desc" },
-          include: {
-            user: {
-              select: { name: true, email: true },
-            },
+    // Setup date ranges for growth calculation
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const previousMonthStart = new Date(
+      now.getFullYear(),
+      now.getMonth() - 1,
+      1
+    );
+    const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    const [
+      totalOrders,
+      totalRevenue,
+      statusCounts,
+      recentOrders,
+      currentMonthOrders,
+      previousMonthOrders,
+      currentMonthRevenue,
+      previousMonthRevenue,
+    ] = await Promise.all([
+      prisma.order.count({ where }),
+      prisma.order.aggregate({
+        where: { ...where, status: { not: "CANCELLED" } },
+        _sum: { total: true },
+      }),
+      prisma.order.groupBy({
+        by: ["status"],
+        where,
+        _count: { status: true },
+      }),
+      prisma.order.findMany({
+        where,
+        take: 5,
+        orderBy: { createdAt: "desc" },
+        include: {
+          user: {
+            select: { name: true, email: true },
           },
-        }),
-      ]);
+        },
+      }),
+      // Current month orders
+      prisma.order.count({
+        where: {
+          createdAt: {
+            gte: currentMonthStart,
+          },
+        },
+      }),
+      // Previous month orders
+      prisma.order.count({
+        where: {
+          createdAt: {
+            gte: previousMonthStart,
+            lte: previousMonthEnd,
+          },
+        },
+      }),
+      // Current month revenue
+      prisma.order.aggregate({
+        where: {
+          createdAt: {
+            gte: currentMonthStart,
+          },
+          status: { not: "CANCELLED" },
+        },
+        _sum: { total: true },
+      }),
+      // Previous month revenue
+      prisma.order.aggregate({
+        where: {
+          createdAt: {
+            gte: previousMonthStart,
+            lte: previousMonthEnd,
+          },
+          status: { not: "CANCELLED" },
+        },
+        _sum: { total: true },
+      }),
+    ]);
+
+    // Calculate growth percentages
+    const orderGrowthPercentage =
+      previousMonthOrders > 0
+        ? ((currentMonthOrders - previousMonthOrders) / previousMonthOrders) *
+          100
+        : currentMonthOrders > 0
+        ? 100
+        : 0;
+
+    const currentRevenue = currentMonthRevenue._sum.total || 0;
+    const previousRevenue = previousMonthRevenue._sum.total || 0;
+    const revenueGrowthPercentage =
+      previousRevenue > 0
+        ? ((currentRevenue - previousRevenue) / previousRevenue) * 100
+        : currentRevenue > 0
+        ? 100
+        : 0;
 
     return {
       totalOrders,
@@ -532,6 +606,12 @@ const getOrderStats = async (dateRange = {}) => {
         return acc;
       }, {}),
       recentOrders,
+      currentMonthOrders,
+      previousMonthOrders,
+      orderGrowthPercentage: Math.round(orderGrowthPercentage * 100) / 100,
+      currentMonthRevenue: currentRevenue,
+      previousMonthRevenue: previousRevenue,
+      revenueGrowthPercentage: Math.round(revenueGrowthPercentage * 100) / 100,
     };
   } catch (error) {
     console.error("Error fetching order stats:", error);

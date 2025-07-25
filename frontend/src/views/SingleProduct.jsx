@@ -19,6 +19,7 @@ const SingleProduct = () => {
   const [currentStock, setCurrentStock] = useState(0);
   const [addingToCart, setAddingToCart] = useState(false);
   const [addToCartMessage, setAddToCartMessage] = useState("");
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -33,19 +34,20 @@ const SingleProduct = () => {
 
         const data = await response.json();
 
-        if (!data) {
-          throw new Error("Product not found");
+        if (data.success && data.data) {
+          // Handle new structured response format
+          setProduct(data.data);
+        } else {
+          throw new Error(data.message || "Product not found");
         }
-
-        setProduct(data);
       } catch (error) {
         console.error("Error fetching product:", error);
-        // Instead of throwing error, set product to null to show "Product not found"
-        setProduct(null);
+        setError(error.message);
       } finally {
         setLoading(false);
       }
     };
+
     fetchProduct();
   }, [slug]);
 
@@ -155,10 +157,18 @@ const SingleProduct = () => {
     );
   }
 
-  if (!product) {
+  if (error || !product) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Product not found</div>
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error || "Product not found"}</p>
+          <button
+            onClick={() => window.history.back()}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Go Back
+          </button>
+        </div>
       </div>
     );
   }

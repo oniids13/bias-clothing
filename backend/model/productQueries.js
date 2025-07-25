@@ -194,6 +194,190 @@ const getVariantStock = async (productId, size, color) => {
   }
 };
 
+// Admin-specific product queries
+const getProductCount = async (options = {}) => {
+  try {
+    const { isActive, category } = options;
+    const where = {};
+
+    if (isActive !== undefined) {
+      where.isActive = isActive;
+    }
+
+    if (category) {
+      where.category = category;
+    }
+
+    const count = await prisma.product.count({ where });
+    return count;
+  } catch (error) {
+    console.error("Error getting product count:", error);
+    throw error;
+  }
+};
+
+const getProductStats = async () => {
+  try {
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const previousMonthStart = new Date(
+      now.getFullYear(),
+      now.getMonth() - 1,
+      1
+    );
+    const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    const [
+      totalProducts,
+      activeProducts,
+      inactiveProducts,
+      featuredProducts,
+      newProducts,
+      recentProducts,
+      categoryStats,
+      totalVariants,
+      outOfStockVariants,
+      currentMonthProducts,
+      previousMonthProducts,
+    ] = await Promise.all([
+      prisma.product.count(),
+      prisma.product.count({ where: { isActive: true } }),
+      prisma.product.count({ where: { isActive: false } }),
+      prisma.product.count({ where: { isFeatured: true } }),
+      prisma.product.count({ where: { isNew: true } }),
+      prisma.product.findMany({
+        take: 5,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          category: true,
+          price: true,
+          isActive: true,
+          createdAt: true,
+        },
+      }),
+      prisma.product.groupBy({
+        by: ["category"],
+        _count: { category: true },
+      }),
+      prisma.productVariant.count(),
+      prisma.productVariant.count({ where: { stock: 0 } }),
+      // Current month products
+      prisma.product.count({
+        where: {
+          createdAt: {
+            gte: currentMonthStart,
+          },
+        },
+      }),
+      // Previous month products
+      prisma.product.count({
+        where: {
+          createdAt: {
+            gte: previousMonthStart,
+            lte: previousMonthEnd,
+          },
+        },
+      }),
+    ]);
+
+    // Calculate growth percentage
+    const productGrowthPercentage =
+      previousMonthProducts > 0
+        ? ((currentMonthProducts - previousMonthProducts) /
+            previousMonthProducts) *
+          100
+        : currentMonthProducts > 0
+        ? 100
+        : 0;
+
+    return {
+      totalProducts,
+      activeProducts,
+      inactiveProducts,
+      featuredProducts,
+      newProducts,
+      recentProducts,
+      categoryStats: categoryStats.reduce((acc, item) => {
+        acc[item.category] = item._count.category;
+        return acc;
+      }, {}),
+      totalVariants,
+      outOfStockVariants,
+      inStockVariants: totalVariants - outOfStockVariants,
+      currentMonthProducts,
+      previousMonthProducts,
+      productGrowthPercentage: Math.round(productGrowthPercentage * 100) / 100,
+    };
+  } catch (error) {
+    console.error("Error fetching product stats:", error);
+    throw error;
+  }
+};
+
+const getAllProductsForAdmin = async (options = {}) => {
+  try {
+    const { page = 1, limit = 20, category, isActive, search } = options;
+    const skip = (page - 1) * limit;
+
+    const where = {};
+    if (category) {
+      where.category = category;
+    }
+    if (isActive !== undefined) {
+      where.isActive = isActive;
+    }
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+        { category: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    const [products, totalCount] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+          variants: {
+            select: {
+              id: true,
+              size: true,
+              color: true,
+              stock: true,
+              sku: true,
+            },
+          },
+          _count: {
+            select: {
+              orderItems: true,
+            },
+          },
+        },
+      }),
+      prisma.product.count({ where }),
+    ]);
+
+    return {
+      products,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalCount / limit),
+        totalCount,
+        hasNextPage: page < Math.ceil(totalCount / limit),
+        hasPrevPage: page > 1,
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching all products for admin:", error);
+    throw error;
+  }
+};
+
 export {
   getAllProducts,
   getFeaturedProducts,
@@ -205,4 +389,8 @@ export {
   getAvailableColorsForSize,
   getAvailableSizesForColor,
   getVariantStock,
+  // Admin functions
+  getProductCount,
+  getProductStats,
+  getAllProductsForAdmin,
 };

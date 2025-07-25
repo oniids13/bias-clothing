@@ -7,6 +7,10 @@ import {
   updateAddress,
   deleteAddress,
   setDefaultAddress,
+  // Admin functions
+  getUserCount,
+  getAllUsers,
+  getUserStats,
 } from "../model/userQueries.js";
 import { body, validationResult } from "express-validator";
 import { genPassword } from "../utils/passwordUtil.js";
@@ -311,6 +315,73 @@ const setDefaultAddressController = async (req, res) => {
   }
 };
 
+// Admin Controllers
+const getUserCountController = async (req, res) => {
+  try {
+    // Get customer count (excluding admins)
+    const customerCount = await getUserCount({ excludeRole: "ADMIN" });
+
+    res.status(200).json({
+      success: true,
+      message: "User count retrieved successfully",
+      count: customerCount,
+      data: { customerCount },
+    });
+  } catch (error) {
+    console.error("Error fetching user count:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching user count",
+    });
+  }
+};
+
+const getAllUsersController = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, role, search } = req.query;
+
+    const options = {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      role,
+      search,
+    };
+
+    const result = await getAllUsers(options);
+
+    res.status(200).json({
+      success: true,
+      message: "Users retrieved successfully",
+      data: result.users,
+      pagination: result.pagination,
+    });
+  } catch (error) {
+    console.error("Error fetching all users:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching users",
+    });
+  }
+};
+
+const getUserStatsController = async (req, res) => {
+  try {
+    const stats = await getUserStats();
+
+    res.status(200).json({
+      success: true,
+      message: "User statistics retrieved successfully",
+      data: stats,
+    });
+  } catch (error) {
+    console.error("Error fetching user statistics:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching user statistics",
+    });
+  }
+};
+
 export {
   registerUser,
   loginUser,
@@ -320,4 +391,8 @@ export {
   updateAddressController,
   deleteAddressController,
   setDefaultAddressController,
+  // Admin controllers
+  getUserCountController,
+  getAllUsersController,
+  getUserStatsController,
 };
