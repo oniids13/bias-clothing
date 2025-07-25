@@ -174,6 +174,15 @@ const Header = ({ user, setUser }) => {
             <Link to="/">Home</Link>
             <Link to="/about">About</Link>
             <Link to="/shop">Shop</Link>
+            {user && user.role === "ADMIN" && (
+              <Link
+                to="/admin"
+                className="text-blue-600 hover:text-blue-700 transition-colors"
+                title="Admin Dashboard"
+              >
+                Admin
+              </Link>
+            )}
           </div>
 
           {/* Desktop Cart and User - Hidden on mobile */}
@@ -247,6 +256,16 @@ const Header = ({ user, setUser }) => {
               >
                 Shop
               </Link>
+              {user && user.role === "ADMIN" && (
+                <Link
+                  to="/admin"
+                  onClick={closeMenu}
+                  className="font-bold text-blue-600 hover:text-blue-700 transition-colors py-2 px-3 rounded hover:bg-blue-50"
+                  title="Admin Dashboard"
+                >
+                  🔧 Admin
+                </Link>
+              )}
               <hr className="my-1" />
               <Link
                 to="/cart"
