@@ -83,6 +83,25 @@ const getActiveProductsController = async (req, res) => {
   }
 };
 
+const getInactiveProductsController = async (req, res) => {
+  try {
+    const products = await getAllProducts();
+    // Filter inactive products (isActive = false)
+    const inactiveProducts = products.filter((product) => !product.isActive);
+    res.status(200).json({
+      success: true,
+      message: "Inactive products retrieved successfully",
+      data: inactiveProducts,
+    });
+  } catch (error) {
+    console.error("Error fetching inactive products:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching inactive products",
+    });
+  }
+};
+
 const getSingleProductController = async (req, res) => {
   try {
     const { slug } = req.params;
@@ -296,6 +315,7 @@ export {
   getFeaturedProductsController,
   getNewProductsController,
   getActiveProductsController,
+  getInactiveProductsController,
   getSingleProductController,
   getProductColorsController,
   getProductSizesController,

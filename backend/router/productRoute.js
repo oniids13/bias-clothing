@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   getAllProductsController,
   getActiveProductsController,
+  getInactiveProductsController,
   getFeaturedProductsController,
   getNewProductsController,
   getSingleProductController,
@@ -19,6 +20,7 @@ const productRouter = Router();
 // Basic product routes
 productRouter.get("/all", getAllProductsController);
 productRouter.get("/active", getActiveProductsController);
+productRouter.get("/inactive", getInactiveProductsController);
 productRouter.get("/featured", getFeaturedProductsController);
 productRouter.get("/new", getNewProductsController);
 
