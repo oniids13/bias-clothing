@@ -5,9 +5,10 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import PeopleIcon from "@mui/icons-material/People";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import PhotoLibraryIcon from "@mui/icons-material/PhotoLibrary";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import SettingsIcon from "@mui/icons-material/Settings";
+import WarehouseIcon from "@mui/icons-material/Warehouse";
+import AnalyticsIcon from "@mui/icons-material/Analytics";
 
 const Admin = () => {
   const { user } = useAuth();
@@ -36,18 +37,18 @@ const Admin = () => {
       hoverColor: "hover:bg-blue-600",
     },
     {
-      title: "User Management",
-      description: "Manage customer accounts and permissions",
-      icon: <PeopleIcon className="h-8 w-8" />,
-      color: "bg-green-500",
-      hoverColor: "hover:bg-green-600",
-    },
-    {
       title: "Product Management",
-      description: "Add, edit, and manage products",
+      description: "Add, edit, and manage product catalog",
       icon: <InventoryIcon className="h-8 w-8" />,
       color: "bg-purple-500",
       hoverColor: "hover:bg-purple-600",
+    },
+    {
+      title: "Inventory Management",
+      description: "Track stock levels and manage inventory",
+      icon: <WarehouseIcon className="h-8 w-8" />,
+      color: "bg-yellow-500",
+      hoverColor: "hover:bg-yellow-600",
     },
     {
       title: "Order Management",
@@ -57,16 +58,16 @@ const Admin = () => {
       hoverColor: "hover:bg-orange-600",
     },
     {
-      title: "Gallery Management",
-      description: "Manage image gallery and media",
-      icon: <PhotoLibraryIcon className="h-8 w-8" />,
-      color: "bg-pink-500",
-      hoverColor: "hover:bg-pink-600",
+      title: "Customer Management",
+      description: "Manage customer accounts and information",
+      icon: <PeopleIcon className="h-8 w-8" />,
+      color: "bg-green-500",
+      hoverColor: "hover:bg-green-600",
     },
     {
-      title: "Analytics",
-      description: "View detailed reports and insights",
-      icon: <BarChartIcon className="h-8 w-8" />,
+      title: "Sales Analytics",
+      description: "View detailed sales reports and insights",
+      icon: <AnalyticsIcon className="h-8 w-8" />,
       color: "bg-indigo-500",
       hoverColor: "hover:bg-indigo-600",
     },
