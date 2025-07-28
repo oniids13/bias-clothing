@@ -22,6 +22,7 @@ import Checkout from "../views/Checkout";
 
 // Admin module
 import Admin from "../admin module/Admin";
+import Dashboard from "../admin module/Dashboard";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -47,6 +48,14 @@ const router = createBrowserRouter(
         element={
           <AdminProtectedRoute>
             <Admin />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/dashboard"
+        element={
+          <AdminProtectedRoute>
+            <Dashboard />
           </AdminProtectedRoute>
         }
       />

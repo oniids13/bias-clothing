@@ -14,6 +14,7 @@ import {
   getRecentActivityController,
   getBasicAdminStatsController,
   getAdminDashboardController,
+  getDashboardAnalyticsController,
 } from "../controller/adminController.js";
 import { requireAuth } from "../middleware/auth.js";
 
@@ -82,6 +83,12 @@ router.get(
   requireAuth,
   requireAdmin,
   getAdminDashboardController
+);
+router.get(
+  "/analytics",
+  requireAuth,
+  requireAdmin,
+  getDashboardAnalyticsController
 );
 
 export default router;

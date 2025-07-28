@@ -42,6 +42,42 @@ export const adminApi = {
     }
   },
 
+  // Get dashboard analytics for charts
+  getDashboardAnalytics: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/analytics`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch dashboard analytics");
+      }
+
+      return {
+        success: true,
+        data: data.data,
+      };
+    } catch (error) {
+      console.error("Error fetching dashboard analytics:", error);
+      return {
+        success: false,
+        message: error.message,
+        data: {
+          revenueTrend: { labels: [], data: [] },
+          orderStatusDistribution: { labels: [], data: [] },
+          userGrowth: { labels: [], data: [] },
+          salesByCategory: { labels: [], data: [] },
+        },
+      };
+    }
+  },
+
   // Get admin dashboard statistics
   getAdminStats: async () => {
     try {

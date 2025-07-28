@@ -2,6 +2,7 @@ import {
   getAdminStats,
   getRecentActivity,
   getAdminDashboardData,
+  getDashboardAnalytics,
 } from "../model/adminQueries.js";
 import { getUserStats } from "../model/userQueries.js";
 import { getProductStats } from "../model/productQueries.js";
@@ -133,9 +134,29 @@ const getAdminDashboardController = async (req, res) => {
   }
 };
 
+// Get dashboard analytics controller
+const getDashboardAnalyticsController = async (req, res) => {
+  try {
+    const analyticsData = await getDashboardAnalytics();
+
+    res.status(200).json({
+      success: true,
+      message: "Dashboard analytics retrieved successfully",
+      data: analyticsData,
+    });
+  } catch (error) {
+    console.error("Error fetching dashboard analytics:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching dashboard analytics",
+    });
+  }
+};
+
 export {
   getCompleteAdminStatsController,
   getRecentActivityController,
   getBasicAdminStatsController,
   getAdminDashboardController,
+  getDashboardAnalyticsController,
 };
