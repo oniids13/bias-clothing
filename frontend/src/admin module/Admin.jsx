@@ -2,12 +2,15 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../App";
 import { adminApi } from "../services/adminApi";
 import { useNavigate } from "react-router-dom";
+
+// Reusable Components
+import { DashboardHeader, StatisticsGrid, RecentActivity } from "./components";
+
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import PeopleIcon from "@mui/icons-material/People";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import BarChartIcon from "@mui/icons-material/BarChart";
-import SettingsIcon from "@mui/icons-material/Settings";
 import WarehouseIcon from "@mui/icons-material/Warehouse";
 import AnalyticsIcon from "@mui/icons-material/Analytics";
 
@@ -135,35 +138,6 @@ const Admin = () => {
     return new Intl.NumberFormat().format(num);
   };
 
-  const formatGrowthPercentage = (percentage) => {
-    const sign = percentage >= 0 ? "+" : "";
-    return `${sign}${percentage.toFixed(1)}%`;
-  };
-
-  const getGrowthColor = (percentage) => {
-    if (percentage > 0) return "text-green-600";
-    if (percentage < 0) return "text-red-600";
-    return "text-gray-600";
-  };
-
-  const formatActivityTime = (timestamp) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffInSeconds = Math.floor((now - date) / 1000);
-
-    if (diffInSeconds < 60) {
-      return `${diffInSeconds}s ago`;
-    } else if (diffInSeconds < 3600) {
-      return `${Math.floor(diffInSeconds / 60)}m ago`;
-    } else if (diffInSeconds < 86400) {
-      return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    } else if (diffInSeconds < 604800) {
-      return `${Math.floor(diffInSeconds / 86400)}d ago`;
-    } else {
-      return date.toLocaleDateString();
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
@@ -196,104 +170,21 @@ const Admin = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <img
-                src="/src/images/bias_logo.png"
-                alt="Bias Clothing Logo"
-                className="h-12 w-auto"
-              />
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">
-                  Admin Dashboard
-                </h1>
-                <p className="text-gray-600">
-                  Welcome back, {user?.name || "Administrator"}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={fetchAdminData}
-                className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                <SettingsIcon className="h-6 w-6" />
-                <span className="text-sm">Refresh</span>
-              </button>
-            </div>
-          </div>
-        </div>
+        {/* Admin Dashboard Header */}
+        <DashboardHeader
+          title="Admin Dashboard"
+          user={user}
+          onRefresh={fetchAdminData}
+        />
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Users</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {formatNumber(stats.totalUsers)}
-                </p>
-              </div>
-              <PeopleIcon className="h-8 w-8 text-blue-500" />
-            </div>
-            <p className={`text-xs mt-2 ${getGrowthColor(growthData.users)}`}>
-              {formatGrowthPercentage(growthData.users)} from last month
-            </p>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Total Products
-                </p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {formatNumber(stats.totalProducts)}
-                </p>
-              </div>
-              <InventoryIcon className="h-8 w-8 text-purple-500" />
-            </div>
-            <p
-              className={`text-xs mt-2 ${getGrowthColor(growthData.products)}`}
-            >
-              {formatGrowthPercentage(growthData.products)} from last month
-            </p>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Total Orders
-                </p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {formatNumber(stats.totalOrders)}
-                </p>
-              </div>
-              <ShoppingCartIcon className="h-8 w-8 text-orange-500" />
-            </div>
-            <p className={`text-xs mt-2 ${getGrowthColor(growthData.orders)}`}>
-              {formatGrowthPercentage(growthData.orders)} from last month
-            </p>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Revenue</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(stats.totalRevenue)}
-                </p>
-              </div>
-              <BarChartIcon className="h-8 w-8 text-green-500" />
-            </div>
-            <p className={`text-xs mt-2 ${getGrowthColor(growthData.revenue)}`}>
-              {formatGrowthPercentage(growthData.revenue)} from last month
-            </p>
-          </div>
-        </div>
+        <StatisticsGrid
+          stats={stats}
+          growthData={growthData}
+          formatCurrency={formatCurrency}
+          formatNumber={formatNumber}
+          showGrowth={true}
+        />
 
         {/* Admin Features Grid */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
@@ -329,74 +220,15 @@ const Admin = () => {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 mt-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">
-              Recent Activity
-            </h2>
-            <button
-              onClick={fetchAdminData}
-              className="text-sm text-blue-600 hover:text-blue-700 transition-colors"
-            >
-              Refresh
-            </button>
-          </div>
-          <div className="space-y-4">
-            {recentActivity.length > 0 ? (
-              recentActivity.map((activity, index) => (
-                <div
-                  key={index}
-                  className="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <div
-                    className={`${
-                      activity.type === "order"
-                        ? "bg-green-100"
-                        : activity.type === "user"
-                        ? "bg-blue-100"
-                        : "bg-purple-100"
-                    } p-2 rounded-full flex-shrink-0`}
-                  >
-                    {activity.type === "order" && (
-                      <ShoppingCartIcon className="h-5 w-5 text-green-600" />
-                    )}
-                    {activity.type === "user" && (
-                      <PeopleIcon className="h-5 w-5 text-blue-600" />
-                    )}
-                    {activity.type === "product" && (
-                      <InventoryIcon className="h-5 w-5 text-purple-600" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 leading-relaxed">
-                      {activity.message}
-                    </p>
-                    <div className="flex items-center justify-between mt-1">
-                      <p className="text-xs text-gray-500">
-                        {formatActivityTime(activity.timestamp)}
-                      </p>
-                      {activity.type === "order" && activity.details?.total && (
-                        <span className="text-xs font-medium text-green-600">
-                          {formatCurrency(activity.details.total)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-12">
-                <div className="bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                  <BarChartIcon className="h-8 w-8 text-gray-400" />
-                </div>
-                <p className="text-gray-500 font-medium">No recent activity</p>
-                <p className="text-gray-400 text-sm mt-1">
-                  Activity will appear here as your business grows
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+        <RecentActivity
+          activities={recentActivity}
+          onRefresh={fetchAdminData}
+          title="Recent Activity"
+          maxHeight=""
+          formatCurrency={formatCurrency}
+          emptyMessage="No recent activity"
+          emptySubMessage="Activity will appear here as your business grows"
+        />
       </div>
     </div>
   );
