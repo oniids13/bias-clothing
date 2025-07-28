@@ -172,6 +172,56 @@ export const adminApi = {
     }
   },
 
+  // Get all products for admin with pagination and filtering
+  getAllProductsForAdmin: async (options = {}) => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (options.page) queryParams.append("page", options.page);
+      if (options.limit) queryParams.append("limit", options.limit);
+      if (options.category) queryParams.append("category", options.category);
+      if (options.isActive !== undefined)
+        queryParams.append("isActive", options.isActive);
+      if (options.search) queryParams.append("search", options.search);
+
+      const response = await fetch(
+        `${API_BASE_URL}/admin/products?${queryParams}`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch products");
+      }
+
+      return {
+        success: true,
+        data: data.data,
+        pagination: data.pagination,
+      };
+    } catch (error) {
+      console.error("Error fetching products for admin:", error);
+      return {
+        success: false,
+        message: error.message,
+        data: [],
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalCount: 0,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+      };
+    }
+  },
+
   // Get order statistics (total orders and sales)
   getOrderStats: async (dateRange = {}) => {
     try {

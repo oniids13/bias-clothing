@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../App";
+import { useNavigate } from "react-router-dom";
 import { adminApi } from "../services/adminApi";
 import {
   Chart as ChartJS,
@@ -20,6 +21,7 @@ import { DashboardHeader, StatisticsGrid, RecentActivity } from "./components";
 
 // Material UI Icons
 import BarChartIcon from "@mui/icons-material/BarChart";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
 // Register Chart.js components
 ChartJS.register(
@@ -36,6 +38,7 @@ ChartJS.register(
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalProducts: 0,
@@ -272,6 +275,10 @@ const Dashboard = () => {
     },
   };
 
+  const handleBackToAdmin = () => {
+    navigate("/admin");
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
@@ -312,7 +319,16 @@ const Dashboard = () => {
           }`}
           user={user}
           onRefresh={fetchDashboardData}
-        />
+        >
+          {/* Back Button */}
+          <button
+            onClick={handleBackToAdmin}
+            className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
+          >
+            <ArrowBackIcon className="h-5 w-5" />
+            <span className="text-sm font-medium">Back to Admin</span>
+          </button>
+        </DashboardHeader>
 
         {/* Key Statistics */}
         <StatisticsGrid

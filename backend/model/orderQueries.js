@@ -521,8 +521,13 @@ const getOrderStats = async (dateRange = {}) => {
       previousMonthRevenue,
     ] = await Promise.all([
       prisma.order.count({ where }),
+      // Only count revenue from PAID and DELIVERED orders
       prisma.order.aggregate({
-        where: { ...where, status: { not: "CANCELLED" } },
+        where: {
+          ...where,
+          status: "DELIVERED",
+          paymentStatus: "PAID",
+        },
         _sum: { total: true },
       }),
       prisma.order.groupBy({
@@ -557,24 +562,26 @@ const getOrderStats = async (dateRange = {}) => {
           },
         },
       }),
-      // Current month revenue
+      // Current month revenue - only PAID and DELIVERED
       prisma.order.aggregate({
         where: {
           createdAt: {
             gte: currentMonthStart,
           },
-          status: { not: "CANCELLED" },
+          status: "DELIVERED",
+          paymentStatus: "PAID",
         },
         _sum: { total: true },
       }),
-      // Previous month revenue
+      // Previous month revenue - only PAID and DELIVERED
       prisma.order.aggregate({
         where: {
           createdAt: {
             gte: previousMonthStart,
             lte: previousMonthEnd,
           },
-          status: { not: "CANCELLED" },
+          status: "DELIVERED",
+          paymentStatus: "PAID",
         },
         _sum: { total: true },
       }),

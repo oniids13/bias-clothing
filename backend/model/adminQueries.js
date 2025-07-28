@@ -27,8 +27,12 @@ const getAdminStats = async () => {
 
       // Order statistics
       prisma.order.count(),
+      // Only count revenue from PAID and DELIVERED orders
       prisma.order.aggregate({
-        where: { status: { not: "CANCELLED" } },
+        where: {
+          status: "DELIVERED",
+          paymentStatus: "PAID",
+        },
         _sum: { total: true },
       }),
     ]);
@@ -193,19 +197,20 @@ const getAdminDashboardData = async () => {
   }
 };
 
-// Get revenue trend data for charts (last 6 months)
+// Get revenue trend data for charts (last 6 months) - only PAID and DELIVERED orders
 const getRevenueTrendData = async () => {
   try {
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-    // Get orders grouped by month for the last 6 months
+    // Get orders grouped by month for the last 6 months - only PAID and DELIVERED
     const orders = await prisma.order.findMany({
       where: {
         createdAt: {
           gte: sixMonthsAgo,
         },
-        status: { not: "CANCELLED" },
+        status: "DELIVERED",
+        paymentStatus: "PAID",
       },
       select: {
         total: true,
@@ -329,10 +334,10 @@ const getUserGrowthData = async () => {
   }
 };
 
-// Get sales by category
+// Get sales by category - only from PAID and DELIVERED orders
 const getSalesByCategoryData = async () => {
   try {
-    // Get order items with product category information
+    // Get order items with product category information - only from PAID and DELIVERED orders
     const orderItems = await prisma.orderItem.findMany({
       include: {
         product: {
@@ -343,12 +348,14 @@ const getSalesByCategoryData = async () => {
         order: {
           select: {
             status: true,
+            paymentStatus: true,
           },
         },
       },
       where: {
         order: {
-          status: { not: "CANCELLED" },
+          status: "DELIVERED",
+          paymentStatus: "PAID",
         },
       },
     });
