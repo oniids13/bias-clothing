@@ -84,12 +84,27 @@ const registerUser = [
         });
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: "Error creating user",
-        error: error.message,
-        errors,
-      });
+      // Handle specific error types with appropriate status codes
+      if (error.message.includes("email already exists")) {
+        return res.status(409).json({
+          success: false,
+          message: "Email address is already registered",
+          error: "User with this email already exists",
+        });
+      } else if (error.message.includes("Google account already exists")) {
+        return res.status(409).json({
+          success: false,
+          message: "Google account is already registered",
+          error: "User with this Google account already exists",
+        });
+      } else {
+        // Generic server error
+        res.status(500).json({
+          success: false,
+          message: "Error creating user",
+          error: error.message,
+        });
+      }
     }
   },
 ];

@@ -115,28 +115,66 @@ const Register = () => {
           navigate("/");
         }, 1500);
       } else {
-        // Handle validation errors from backend
-        if (data.errors && data.errors.array) {
-          const backendErrors = {};
-          data.errors.array().forEach((error) => {
-            backendErrors[error.path] = error.msg;
+        // Handle different HTTP status codes
+        if (response.status === 409) {
+          // Conflict - email already exists
+          setErrors({
+            email:
+              "This email address is already registered. Please log in or use a different email address.",
           });
-          setErrors(backendErrors);
-        } else {
-          // Handle specific error messages
-          const errorMessage =
-            data.message ||
-            data.error ||
-            "Registration failed. Please try again.";
-
-          if (errorMessage.includes("email already exists")) {
-            setErrors({
-              email:
-                "This email is already registered. Please use a different email or sign in.",
+        } else if (response.status === 400) {
+          // Handle validation errors from backend
+          if (data.errors && data.errors.array) {
+            const backendErrors = {};
+            data.errors.array().forEach((error) => {
+              backendErrors[error.path] = error.msg;
             });
+            setErrors(backendErrors);
           } else {
-            setErrors({ general: errorMessage });
+            // Handle specific error messages
+            const errorMessage =
+              data.error ||
+              data.message ||
+              "Registration failed. Please try again.";
+
+            // Check for specific error types and provide user-friendly messages
+            if (
+              errorMessage.includes("email already exists") ||
+              errorMessage.includes("User with this email already exists")
+            ) {
+              setErrors({
+                email:
+                  "This email address is already registered. Please log in or use a different email address.",
+              });
+            } else if (errorMessage.includes("Google account already exists")) {
+              setErrors({
+                general:
+                  "This Google account is already registered. Please log in with your existing account.",
+              });
+            } else if (errorMessage.includes("Validation failed")) {
+              // Handle validation errors that might be in the errors array
+              if (data.errors && Array.isArray(data.errors)) {
+                const backendErrors = {};
+                data.errors.forEach((error) => {
+                  if (error.path) {
+                    backendErrors[error.path] = error.msg;
+                  }
+                });
+                setErrors(backendErrors);
+              } else {
+                setErrors({ general: errorMessage });
+              }
+            } else {
+              setErrors({ general: errorMessage });
+            }
           }
+        } else {
+          // Handle other errors (500, etc.)
+          const errorMessage =
+            data.error ||
+            data.message ||
+            "Registration failed. Please try again.";
+          setErrors({ general: errorMessage });
         }
       }
     } catch (error) {
