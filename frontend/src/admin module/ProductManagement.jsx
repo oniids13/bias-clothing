@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { adminApi } from "../services/adminApi";
 
 // Reusable Components
-import { DashboardHeader } from "./components";
+import { DashboardHeader, ProductDetailsModal } from "./components";
+import ProductForm from "./components/ProductForm";
 
 // Material UI Icons
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -14,6 +15,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import AddIcon from "@mui/icons-material/Add";
+import WarningIcon from "@mui/icons-material/Warning";
 
 const ProductManagement = () => {
   const { user } = useAuth();
@@ -35,6 +37,21 @@ const ProductManagement = () => {
   const [filterCategory, setFilterCategory] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
 
+  // Form management states
+  const [showForm, setShowForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [formLoading, setFormLoading] = useState(false);
+
+  // Modal states
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [viewingProductId, setViewingProductId] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingProduct, setDeletingProduct] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Success/notification states
+  const [successMessage, setSuccessMessage] = useState("");
+
   // Debounce search term
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -47,6 +64,16 @@ const ProductManagement = () => {
   useEffect(() => {
     fetchProducts();
   }, [currentPage, debouncedSearchTerm, filterCategory, filterStatus]);
+
+  // Auto-hide success message
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage("");
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
 
   const fetchProducts = async () => {
     try {
@@ -89,22 +116,95 @@ const ProductManagement = () => {
   };
 
   const handleViewDetails = (productId) => {
-    // Navigate to product details page
-    navigate(`/products/${productId}`);
+    setViewingProductId(productId);
+    setShowDetailsModal(true);
   };
 
-  const handleEditProduct = (productId) => {
-    // TODO: Navigate to edit product page or open edit modal
-    console.log("Edit product:", productId);
-    // navigate(`/admin/products/edit/${productId}`);
+  const handleAddProduct = () => {
+    setEditingProduct(null);
+    setShowForm(true);
   };
 
-  const handleDeleteProduct = (productId, productName) => {
-    // TODO: Show confirmation dialog and delete product
-    if (window.confirm(`Are you sure you want to delete "${productName}"?`)) {
-      console.log("Delete product:", productId);
-      // Implement delete functionality
+  const handleEditProduct = async (productId) => {
+    try {
+      setFormLoading(true);
+      const result = await adminApi.getProductById(productId);
+
+      if (result.success) {
+        setEditingProduct(result.data);
+        setShowForm(true);
+      } else {
+        setError(result.message || "Failed to fetch product details");
+      }
+    } catch (error) {
+      console.error("Error fetching product for edit:", error);
+      setError("Failed to load product details");
+    } finally {
+      setFormLoading(false);
     }
+  };
+
+  const handleEditFromModal = (product) => {
+    setEditingProduct(product);
+    setShowForm(true);
+  };
+
+  const handleDeleteProduct = (product) => {
+    setDeletingProduct(product);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingProduct) return;
+
+    try {
+      setDeleteLoading(true);
+      const result = await adminApi.deleteProduct(deletingProduct.id);
+
+      if (result.success) {
+        // Show success message
+        setSuccessMessage(
+          `Product "${deletingProduct.name}" deleted successfully`
+        );
+
+        // Refresh the products list
+        fetchProducts();
+
+        // Close confirmation modal
+        setShowDeleteConfirm(false);
+        setDeletingProduct(null);
+      } else {
+        setError(result.message || "Failed to delete product");
+      }
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      setError("Failed to delete product");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setDeletingProduct(null);
+  };
+
+  const handleFormSave = (savedProduct) => {
+    // Close the form
+    setShowForm(false);
+    setEditingProduct(null);
+
+    // Show success message
+    const action = editingProduct ? "updated" : "created";
+    setSuccessMessage(`Product "${savedProduct.name}" ${action} successfully`);
+
+    // Refresh the products list
+    fetchProducts();
+  };
+
+  const handleFormCancel = () => {
+    setShowForm(false);
+    setEditingProduct(null);
   };
 
   const formatCurrency = (amount) => {
@@ -124,6 +224,87 @@ const ProductManagement = () => {
     setCurrentPage(newPage);
   };
 
+  // Delete Confirmation Modal Component
+  const DeleteConfirmationModal = () => {
+    if (!showDeleteConfirm || !deletingProduct) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+              <WarningIcon className="h-6 w-6 text-red-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Delete Product
+              </h3>
+              <p className="text-sm text-gray-600">
+                This action cannot be undone
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <p className="text-gray-700">
+              Are you sure you want to delete{" "}
+              <span className="font-semibold">"{deletingProduct.name}"</span>?
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+              This will permanently remove the product and all its variants from
+              your store.
+            </p>
+          </div>
+
+          <div className="flex space-x-3">
+            <button
+              onClick={cancelDelete}
+              disabled={deleteLoading}
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmDelete}
+              disabled={deleteLoading}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center"
+            >
+              {deleteLoading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              ) : (
+                "Delete Product"
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Show form if editing or adding
+  if (showForm) {
+    return (
+      <ProductForm
+        productId={editingProduct?.id}
+        initialData={editingProduct}
+        onSave={handleFormSave}
+        onCancel={handleFormCancel}
+      />
+    );
+  }
+
+  // Show loading state for form data
+  if (formLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading product details...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
@@ -138,6 +319,48 @@ const ProductManagement = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="container mx-auto px-4 py-8">
+        {/* Success Message */}
+        {successMessage && (
+          <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                <svg
+                  className="h-5 w-5 text-green-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+              <p className="text-green-700 font-medium">{successMessage}</p>
+            </div>
+            <button
+              onClick={() => setSuccessMessage("")}
+              className="text-green-600 hover:text-green-800"
+            >
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        )}
+
         {/* Header */}
         <DashboardHeader
           title="Product Management"
@@ -148,7 +371,7 @@ const ProductManagement = () => {
           {/* Action Buttons */}
           <div className="flex items-center space-x-3">
             <button
-              onClick={() => console.log("Add new product")}
+              onClick={handleAddProduct}
               className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
             >
               <AddIcon className="h-5 w-5" />
@@ -228,6 +451,12 @@ const ProductManagement = () => {
           {error && (
             <div className="px-6 py-4 bg-red-50 border-b border-red-200">
               <p className="text-red-700">{error}</p>
+              <button
+                onClick={() => setError(null)}
+                className="mt-2 text-red-600 hover:text-red-800 text-sm underline"
+              >
+                Dismiss
+              </button>
             </div>
           )}
 
@@ -339,7 +568,8 @@ const ProductManagement = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button
                           onClick={() => handleViewDetails(product.id)}
-                          className="text-blue-600 hover:text-blue-900 transition-colors"
+                          className="text-blue-600 hover:text-blue-900 transition-colors p-1 rounded-md hover:bg-blue-50"
+                          title="View Details"
                         >
                           <VisibilityIcon className="h-5 w-5" />
                         </button>
@@ -349,7 +579,8 @@ const ProductManagement = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button
                           onClick={() => handleEditProduct(product.id)}
-                          className="text-green-600 hover:text-green-900 transition-colors"
+                          className="text-green-600 hover:text-green-900 transition-colors p-1 rounded-md hover:bg-green-50"
+                          title="Edit Product"
                         >
                           <EditIcon className="h-5 w-5" />
                         </button>
@@ -358,10 +589,9 @@ const ProductManagement = () => {
                       {/* Delete Product */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button
-                          onClick={() =>
-                            handleDeleteProduct(product.id, product.name)
-                          }
-                          className="text-red-600 hover:text-red-900 transition-colors"
+                          onClick={() => handleDeleteProduct(product)}
+                          className="text-red-600 hover:text-red-900 transition-colors p-1 rounded-md hover:bg-red-50"
+                          title="Delete Product"
                         >
                           <DeleteIcon className="h-5 w-5" />
                         </button>
@@ -432,6 +662,20 @@ const ProductManagement = () => {
           )}
         </div>
       </div>
+
+      {/* Product Details Modal */}
+      <ProductDetailsModal
+        productId={viewingProductId}
+        isOpen={showDetailsModal}
+        onClose={() => {
+          setShowDetailsModal(false);
+          setViewingProductId(null);
+        }}
+        onEdit={handleEditFromModal}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal />
     </div>
   );
 };

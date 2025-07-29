@@ -8,6 +8,13 @@ import {
   getProductCountController,
   getProductStatsController,
   getAllProductsForAdminController,
+  // New CRUD controllers
+  createProductController,
+  updateProductController,
+  deleteProductController,
+  getSingleProductForAdminController,
+  uploadImageController,
+  upload,
 } from "../controller/productController.js";
 import {
   getCompleteAdminStatsController,
@@ -39,56 +46,45 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
-// User Management Routes
-router.get("/users/count", requireAuth, requireAdmin, getUserCountController);
-router.get("/users", requireAuth, requireAdmin, getAllUsersController);
-router.get("/users/stats", requireAuth, requireAdmin, getUserStatsController);
+// Apply auth middleware to all admin routes
+router.use(requireAuth, requireAdmin);
 
 // Product Management Routes
-router.get(
-  "/products/count",
-  requireAuth,
-  requireAdmin,
-  getProductCountController
-);
-router.get(
-  "/products",
-  requireAuth,
-  requireAdmin,
-  getAllProductsForAdminController
-);
-router.get(
-  "/products/stats",
-  requireAuth,
-  requireAdmin,
-  getProductStatsController
+router.get("/products/count", getProductCountController);
+
+router.get("/products", getAllProductsForAdminController);
+
+// New CRUD routes for products
+router.post("/products", createProductController);
+
+router.get("/products/:id", getSingleProductForAdminController);
+
+router.put("/products/:id", updateProductController);
+
+router.delete("/products/:id", deleteProductController);
+
+// Image upload route
+router.post(
+  "/upload-image",
+  upload.array("images", 4), // Allow up to 4 images
+  uploadImageController
 );
 
-// Admin Dashboard Routes
-router.get(
-  "/stats",
-  requireAuth,
-  requireAdmin,
-  getCompleteAdminStatsController
-);
-router.get("/activity", requireAuth, requireAdmin, getRecentActivityController);
-router.get(
-  "/basic-stats",
-  requireAuth,
-  requireAdmin,
-  getBasicAdminStatsController
-);
-router.get(
-  "/dashboard",
-  requireAuth,
-  requireAdmin,
-  getAdminDashboardController
-);
-router.get(
-  "/analytics",
-  requireAuth,
-  requireAdmin,
-  getDashboardAnalyticsController
-);
+// Stats Routes
+router.get("/stats", getCompleteAdminStatsController);
+router.get("/basic-stats", getBasicAdminStatsController);
+router.get("/dashboard", getAdminDashboardController);
+router.get("/analytics", getDashboardAnalyticsController);
+
+// Activity Routes
+router.get("/activity", getRecentActivityController);
+
+// User Management Routes
+router.get("/users/count", getUserCountController);
+router.get("/users/stats", getUserStatsController);
+router.get("/users", getAllUsersController);
+
+// Product Stats Routes
+router.get("/products/stats", getProductStatsController);
 
 export default router;

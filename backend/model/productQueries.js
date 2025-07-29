@@ -1,4 +1,8 @@
 import { PrismaClient } from "@prisma/client";
+import {
+  deleteMultipleImages,
+  getPublicIdFromUrl,
+} from "../services/cloudinary.js";
 
 const prisma = new PrismaClient();
 
@@ -378,6 +382,233 @@ const getAllProductsForAdmin = async (options = {}) => {
   }
 };
 
+// New CRUD functions for admin
+
+const createProduct = async (productData) => {
+  try {
+    const { variants, ...productInfo } = productData;
+
+    // Create the product first
+    const product = await prisma.product.create({
+      data: {
+        ...productInfo,
+        variants: {
+          create: variants.map((variant) => ({
+            size: variant.size,
+            color: variant.color,
+            stock: variant.stock,
+            sku: variant.sku,
+          })),
+        },
+      },
+      include: {
+        variants: {
+          orderBy: [{ size: "asc" }, { color: "asc" }],
+        },
+      },
+    });
+
+    return product;
+  } catch (error) {
+    console.error("Error creating product:", error);
+    throw error;
+  }
+};
+
+// Helper function to clean up removed images during product updates
+const cleanupRemovedImages = async (oldImageUrls, newImageUrls) => {
+  try {
+    if (!oldImageUrls || !newImageUrls) return;
+
+    // Find images that were removed (exist in old but not in new)
+    const removedImageUrls = oldImageUrls.filter(
+      (oldUrl) => !newImageUrls.includes(oldUrl)
+    );
+
+    if (removedImageUrls.length > 0) {
+      console.log(
+        `Cleaning up ${removedImageUrls.length} removed images from Cloudinary`
+      );
+
+      // Extract public IDs for the removed images
+      const publicIdsToDelete = removedImageUrls
+        .map((url) => getPublicIdFromUrl(url))
+        .filter((publicId) => publicId !== null);
+
+      if (publicIdsToDelete.length > 0) {
+        try {
+          const cloudinaryResult = await deleteMultipleImages(
+            publicIdsToDelete
+          );
+          console.log(
+            `Removed images cleanup: ${cloudinaryResult.successful} successful, ${cloudinaryResult.failed} failed`
+          );
+        } catch (error) {
+          console.error("Error cleaning up removed images:", error);
+          // Don't fail the update operation due to image cleanup errors
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error in cleanupRemovedImages:", error);
+  }
+};
+
+const updateProduct = async (productId, updateData) => {
+  try {
+    const { variants, ...productInfo } = updateData;
+
+    // Get the current product to check for image changes
+    const currentProduct = await prisma.product.findUnique({
+      where: { id: productId },
+      select: { imageUrl: true },
+    });
+
+    // Start a transaction to update product and variants
+    const result = await prisma.$transaction(async (prisma) => {
+      // Update the product
+      const updatedProduct = await prisma.product.update({
+        where: { id: productId },
+        data: productInfo,
+      });
+
+      // Handle variants if provided
+      if (variants && variants.length > 0) {
+        // Delete all existing variants
+        await prisma.productVariant.deleteMany({
+          where: { productId: productId },
+        });
+
+        // Create new variants
+        await prisma.productVariant.createMany({
+          data: variants.map((variant) => ({
+            productId: productId,
+            size: variant.size,
+            color: variant.color,
+            stock: variant.stock,
+            sku: variant.sku,
+          })),
+        });
+      }
+
+      // Return the updated product with variants
+      return await prisma.product.findUnique({
+        where: { id: productId },
+        include: {
+          variants: {
+            orderBy: [{ size: "asc" }, { color: "asc" }],
+          },
+        },
+      });
+    });
+
+    // Clean up removed images after successful database update
+    if (currentProduct && productInfo.imageUrl) {
+      await cleanupRemovedImages(currentProduct.imageUrl, productInfo.imageUrl);
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Error updating product:", error);
+    throw error;
+  }
+};
+
+const deleteProduct = async (productId) => {
+  try {
+    // First, get the product with its images before deleting
+    const productToDelete = await prisma.product.findUnique({
+      where: { id: productId },
+      include: {
+        variants: true,
+      },
+    });
+
+    if (!productToDelete) {
+      throw new Error("Product not found");
+    }
+
+    // Extract public IDs from image URLs for Cloudinary deletion
+    const publicIds = [];
+    if (productToDelete.imageUrl && productToDelete.imageUrl.length > 0) {
+      productToDelete.imageUrl.forEach((url) => {
+        const publicId = getPublicIdFromUrl(url);
+        if (publicId) {
+          publicIds.push(publicId);
+        }
+      });
+    }
+
+    // Delete images from Cloudinary first (if any exist)
+    if (publicIds.length > 0) {
+      try {
+        console.log(
+          `Deleting ${publicIds.length} images from Cloudinary for product: ${productToDelete.name}`
+        );
+        const cloudinaryResult = await deleteMultipleImages(publicIds);
+        console.log(
+          `Cloudinary deletion completed: ${cloudinaryResult.successful} successful, ${cloudinaryResult.failed} failed`
+        );
+
+        // Log any failed deletions for monitoring (but don't fail the entire operation)
+        if (cloudinaryResult.failed > 0) {
+          console.warn(
+            `Warning: ${cloudinaryResult.failed} images failed to delete from Cloudinary`
+          );
+        }
+      } catch (cloudinaryError) {
+        // Log the error but don't fail the product deletion
+        console.error(
+          "Error deleting images from Cloudinary:",
+          cloudinaryError
+        );
+        console.log(
+          "Continuing with product deletion despite Cloudinary error"
+        );
+      }
+    }
+
+    // Delete the product from database (variants will be deleted automatically due to cascade)
+    const deletedProduct = await prisma.product.delete({
+      where: { id: productId },
+      include: {
+        variants: true,
+      },
+    });
+
+    console.log(
+      `Product "${deletedProduct.name}" and its images deleted successfully`
+    );
+    return deletedProduct;
+  } catch (error) {
+    console.error("Error deleting product:", error);
+    throw error;
+  }
+};
+
+const getSingleProductForAdmin = async (productId) => {
+  try {
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      include: {
+        variants: {
+          orderBy: [{ size: "asc" }, { color: "asc" }],
+        },
+        _count: {
+          select: {
+            orderItems: true,
+          },
+        },
+      },
+    });
+
+    return product;
+  } catch (error) {
+    console.error("Error fetching single product for admin:", error);
+    throw error;
+  }
+};
+
 export {
   getAllProducts,
   getFeaturedProducts,
@@ -393,4 +624,9 @@ export {
   getProductCount,
   getProductStats,
   getAllProductsForAdmin,
+  // New exports
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  getSingleProductForAdmin,
 };

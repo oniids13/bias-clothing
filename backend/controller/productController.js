@@ -13,7 +13,32 @@ import {
   getProductCount,
   getProductStats,
   getAllProductsForAdmin,
+  // New CRUD functions
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  getSingleProductForAdmin,
 } from "../model/productQueries.js";
+
+import { uploadImage, cloudinary } from "../services/cloudinary.js";
+import { createSlug } from "../utils/slugify.js";
+import multer from "multer";
+
+// Configure multer for file uploads
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed"), false);
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit per file
+  },
+});
 
 const getAllProductsController = async (req, res) => {
   try {
@@ -310,6 +335,299 @@ const getAllProductsForAdminController = async (req, res) => {
   }
 };
 
+// New Admin CRUD Controllers
+
+const createProductController = async (req, res) => {
+  try {
+    const {
+      name,
+      description,
+      details,
+      imageUrl,
+      price,
+      category,
+      isActive,
+      isFeatured,
+      isNew,
+      variants,
+    } = req.body;
+
+    // Validate required fields
+    if (
+      !name ||
+      !description ||
+      !price ||
+      !category ||
+      !variants ||
+      variants.length === 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Missing required fields: name, description, price, category, and variants",
+      });
+    }
+
+    // Generate slug from product name
+    const slug = createSlug(name);
+
+    // Prepare product data
+    const productData = {
+      name: name.trim(),
+      description: description.trim(),
+      details: details || [],
+      imageUrl: imageUrl || [],
+      price: parseFloat(price),
+      category,
+      slug,
+      isActive: isActive !== undefined ? isActive : true,
+      isFeatured: isFeatured !== undefined ? isFeatured : false,
+      isNew: isNew !== undefined ? isNew : true,
+      variants: variants.map((variant) => ({
+        size: variant.size,
+        color: variant.color.trim(),
+        stock: parseInt(variant.stock) || 0,
+        sku: `${slug}-${variant.size}-${variant.color
+          .toLowerCase()
+          .replace(/\s+/g, "-")}`,
+      })),
+    };
+
+    const result = await createProduct(productData);
+
+    res.status(201).json({
+      success: true,
+      message: "Product created successfully",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error creating product:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error creating product",
+    });
+  }
+};
+
+const updateProductController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      name,
+      description,
+      details,
+      imageUrl,
+      price,
+      category,
+      isActive,
+      isFeatured,
+      isNew,
+      variants,
+    } = req.body;
+
+    // Validate required fields
+    if (!name || !description || !price || !category) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields: name, description, price, category",
+      });
+    }
+
+    // Generate new slug if name changed
+    const slug = createSlug(name);
+
+    // Prepare update data
+    const updateData = {
+      name: name.trim(),
+      description: description.trim(),
+      details: details || [],
+      imageUrl: imageUrl || [],
+      price: parseFloat(price),
+      category,
+      slug,
+      isActive: isActive !== undefined ? isActive : true,
+      isFeatured: isFeatured !== undefined ? isFeatured : false,
+      isNew: isNew !== undefined ? isNew : true,
+    };
+
+    // Handle variants if provided
+    if (variants && variants.length > 0) {
+      updateData.variants = variants.map((variant) => ({
+        id: variant.id, // Keep existing ID if updating
+        size: variant.size,
+        color: variant.color.trim(),
+        stock: parseInt(variant.stock) || 0,
+        sku:
+          variant.sku ||
+          `${slug}-${variant.size}-${variant.color
+            .toLowerCase()
+            .replace(/\s+/g, "-")}`,
+      }));
+    }
+
+    const result = await updateProduct(id, updateData);
+
+    if (!result) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Product updated successfully",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error updating product:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error updating product",
+    });
+  }
+};
+
+const deleteProductController = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await deleteProduct(id);
+
+    if (!result) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Product deleted successfully",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error deleting product:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error deleting product",
+    });
+  }
+};
+
+const getSingleProductForAdminController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = await getSingleProductForAdmin(id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Product retrieved successfully",
+      data: product,
+    });
+  } catch (error) {
+    console.error("Error fetching product:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching product",
+    });
+  }
+};
+
+const uploadImageController = async (req, res) => {
+  try {
+    // Handle both single and multiple file uploads
+    const files = req.files || (req.file ? [req.file] : []);
+
+    console.log("=== IMAGE UPLOAD DEBUG ===");
+    console.log("req.files:", req.files ? req.files.length : "undefined");
+    console.log("req.file:", req.file ? "present" : "undefined");
+    console.log("files array length:", files.length);
+    console.log(
+      "files details:",
+      files.map((f) => ({
+        originalname: f.originalname,
+        mimetype: f.mimetype,
+        size: f.size,
+      }))
+    );
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No image files provided",
+      });
+    }
+
+    const uploadPromises = files.map(async (file, index) => {
+      console.log(`Uploading file ${index + 1}:`, file.originalname);
+
+      // Generate unique filename with timestamp and random string
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2, 8);
+      const fileExtension = file.originalname.split(".").pop();
+      const uniqueFilename = `product_${timestamp}_${randomString}`;
+
+      console.log(`Generated unique filename:`, uniqueFilename);
+
+      // Create upload options with folder and unique public_id
+      const uploadOptions = {
+        folder: "bias_clothing/tshirts",
+        public_id: uniqueFilename, // Just the filename, folder is specified separately
+        overwrite: false,
+        resource_type: "auto",
+        quality: "auto:good",
+      };
+
+      const result = await new Promise((resolve, reject) => {
+        cloudinary.uploader
+          .upload_stream(uploadOptions, (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          })
+          .end(file.buffer);
+      });
+
+      console.log(
+        `File ${index + 1} uploaded successfully:`,
+        result.secure_url
+      );
+      console.log(`Public ID:`, result.public_id);
+
+      return {
+        url: result.secure_url,
+        publicId: result.public_id,
+      };
+    });
+
+    const uploadResults = await Promise.all(uploadPromises);
+    console.log("All uploads completed:", uploadResults.length, "files");
+    console.log(
+      "Final URLs:",
+      uploadResults.map((r) => r.url)
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `${uploadResults.length} image(s) uploaded successfully`,
+      data: uploadResults.length === 1 ? uploadResults[0] : uploadResults,
+    });
+  } catch (error) {
+    console.error("Error uploading image(s):", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error uploading image(s)",
+    });
+  }
+};
+
 export {
   getAllProductsController,
   getFeaturedProductsController,
@@ -328,4 +646,11 @@ export {
   getProductCountController,
   getProductStatsController,
   getAllProductsForAdminController,
+  // New exports
+  createProductController,
+  updateProductController,
+  deleteProductController,
+  getSingleProductForAdminController,
+  uploadImageController,
+  upload, // Export multer middleware
 };

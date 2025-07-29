@@ -485,4 +485,209 @@ export const adminApi = {
       };
     }
   },
+
+  // New Product CRUD Functions
+
+  // Create a new product
+  createProduct: async (productData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/products`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(productData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to create product");
+      }
+
+      return {
+        success: true,
+        data: data.data,
+        message: data.message,
+      };
+    } catch (error) {
+      console.error("Error creating product:", error);
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  },
+
+  // Get single product for editing
+  getProductById: async (productId) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/admin/products/${productId}`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch product");
+      }
+
+      return {
+        success: true,
+        data: data.data,
+      };
+    } catch (error) {
+      console.error("Error fetching product:", error);
+      return {
+        success: false,
+        message: error.message,
+        data: null,
+      };
+    }
+  },
+
+  // Update an existing product
+  updateProduct: async (productId, productData) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/admin/products/${productId}`,
+        {
+          method: "PUT",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(productData),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to update product");
+      }
+
+      return {
+        success: true,
+        data: data.data,
+        message: data.message,
+      };
+    } catch (error) {
+      console.error("Error updating product:", error);
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  },
+
+  // Delete a product
+  deleteProduct: async (productId) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/admin/products/${productId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to delete product");
+      }
+
+      return {
+        success: true,
+        data: data.data,
+        message: data.message,
+      };
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  },
+
+  // Upload image to Cloudinary
+  uploadImage: async (imageFile) => {
+    try {
+      const formData = new FormData();
+      formData.append("images", imageFile);
+
+      const response = await fetch(`${API_BASE_URL}/admin/upload-image`, {
+        method: "POST",
+        credentials: "include",
+        body: formData, // Don't set Content-Type header, let browser set it
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to upload image");
+      }
+
+      return {
+        success: true,
+        data: data.data,
+        message: data.message,
+      };
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  },
+
+  // Upload multiple images to Cloudinary
+  uploadImages: async (imageFiles) => {
+    try {
+      const formData = new FormData();
+
+      // Add all files to the form data
+      imageFiles.forEach((file) => {
+        formData.append("images", file);
+      });
+
+      const response = await fetch(`${API_BASE_URL}/admin/upload-image`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to upload images");
+      }
+
+      return {
+        success: true,
+        data: Array.isArray(data.data) ? data.data : [data.data], // Ensure array format
+        message: data.message,
+      };
+    } catch (error) {
+      console.error("Error uploading images:", error);
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  },
 };
