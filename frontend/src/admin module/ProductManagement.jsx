@@ -31,12 +31,22 @@ const ProductManagement = () => {
     hasPrevPage: false,
   });
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
 
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   useEffect(() => {
     fetchProducts();
-  }, [currentPage, searchTerm, filterCategory, filterStatus]);
+  }, [currentPage, debouncedSearchTerm, filterCategory, filterStatus]);
 
   const fetchProducts = async () => {
     try {
@@ -48,7 +58,7 @@ const ProductManagement = () => {
         limit: 10,
       };
 
-      if (searchTerm) options.search = searchTerm;
+      if (debouncedSearchTerm) options.search = debouncedSearchTerm;
       if (filterCategory) options.category = filterCategory;
       if (filterStatus !== "") options.isActive = filterStatus === "active";
 
@@ -75,7 +85,7 @@ const ProductManagement = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     setCurrentPage(1);
-    fetchProducts();
+    setDebouncedSearchTerm(searchTerm); // Immediately set the debounced term
   };
 
   const handleViewDetails = (productId) => {
