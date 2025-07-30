@@ -30,9 +30,7 @@ const ProductForm = ({
     isNew: true,
   });
 
-  const [variants, setVariants] = useState([
-    { size: "M", color: "", stock: 0 },
-  ]);
+  const [variants, setVariants] = useState([{ size: "M", color: "" }]);
 
   const [images, setImages] = useState([]);
   const [imageFiles, setImageFiles] = useState([]);
@@ -90,7 +88,6 @@ const ProductForm = ({
             id: v.id,
             size: v.size,
             color: v.color,
-            stock: v.stock,
           }))
         );
       }
@@ -122,7 +119,7 @@ const ProductForm = ({
 
   // Add new variant
   const addVariant = () => {
-    setVariants((prev) => [...prev, { size: "M", color: "", stock: 0 }]);
+    setVariants((prev) => [...prev, { size: "M", color: "" }]);
   };
 
   // Remove variant
@@ -200,11 +197,8 @@ const ProductForm = ({
       newErrors.details = "At least one product detail is required";
 
     // Validate variants
-    const invalidVariants = variants.some(
-      (variant) => !variant.color.trim() || variant.stock < 0
-    );
-    if (invalidVariants)
-      newErrors.variants = "All variants must have color and valid stock";
+    const invalidVariants = variants.some((variant) => !variant.color.trim());
+    if (invalidVariants) newErrors.variants = "All variants must have color";
 
     // Check for duplicate variants
     const variantKeys = variants.map(
@@ -501,25 +495,6 @@ const ProductForm = ({
                         }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="Enter color"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">
-                        Stock
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={variant.stock}
-                        onChange={(e) =>
-                          handleVariantChange(
-                            index,
-                            "stock",
-                            parseInt(e.target.value) || 0
-                          )
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>
 
