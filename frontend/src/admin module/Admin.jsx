@@ -56,6 +56,7 @@ const Admin = () => {
       icon: <WarehouseIcon className="h-8 w-8" />,
       color: "bg-yellow-500",
       hoverColor: "hover:bg-yellow-600",
+      onClick: () => navigate("/admin/inventory"),
     },
     {
       title: "Order Management",

@@ -5,7 +5,10 @@ import {
   getDashboardAnalytics,
 } from "../model/adminQueries.js";
 import { getUserStats } from "../model/userQueries.js";
-import { getProductStats } from "../model/productQueries.js";
+import {
+  getProductStats,
+  getAllProductsForAdmin,
+} from "../model/productQueries.js";
 
 // Get complete admin statistics with growth data
 const getCompleteAdminStatsController = async (req, res) => {
@@ -153,10 +156,157 @@ const getDashboardAnalyticsController = async (req, res) => {
   }
 };
 
+// Get inventory data controller
+const getInventoryDataController = async (req, res) => {
+  try {
+    const result = await getAllProductsForAdmin();
+    const products = result.products || [];
+
+    // Calculate inventory statistics
+    let totalProducts = products.length;
+    let lowStockItems = 0;
+    let outOfStockItems = 0;
+    let totalValue = 0;
+    let totalStock = 0;
+    let variantCount = 0;
+
+    products.forEach((product) => {
+      product.variants.forEach((variant) => {
+        variantCount++;
+        totalStock += variant.stock;
+        totalValue += variant.stock * product.price;
+
+        if (variant.stock === 0) {
+          outOfStockItems++;
+        } else if (variant.stock <= 10) {
+          lowStockItems++;
+        }
+      });
+    });
+
+    const averageStockLevel =
+      variantCount > 0 ? Math.round(totalStock / variantCount) : 0;
+
+    const inventoryStats = {
+      totalProducts,
+      lowStockItems,
+      outOfStockItems,
+      totalValue,
+      averageStockLevel,
+    };
+
+    res.status(200).json({
+      success: true,
+      message: "Inventory data retrieved successfully",
+      data: {
+        products,
+        stats: inventoryStats,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching inventory data:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching inventory data",
+    });
+  }
+};
+
+// Update variant stock controller
+const updateVariantStockController = async (req, res) => {
+  try {
+    const { variantId } = req.params;
+    const { stock, notes } = req.body;
+
+    if (stock === undefined || stock < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Stock level must be a non-negative number",
+      });
+    }
+
+    // Import the updateVariantStock function from productQueries
+    const { updateVariantStock } = await import("../model/productQueries.js");
+
+    const updatedVariant = await updateVariantStock(variantId, stock, notes);
+
+    res.status(200).json({
+      success: true,
+      message: "Stock updated successfully",
+      data: updatedVariant,
+    });
+  } catch (error) {
+    console.error("Error updating stock:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error updating stock",
+    });
+  }
+};
+
+// Get inventory analytics controller
+const getInventoryAnalyticsController = async (req, res) => {
+  try {
+    const result = await getAllProductsForAdmin();
+    const products = result.products || [];
+
+    // Calculate analytics
+    const stockTrends = [];
+    const categoryDistribution = {};
+    const lowStockAlerts = [];
+
+    products.forEach((product) => {
+      // Category distribution
+      if (!categoryDistribution[product.category]) {
+        categoryDistribution[product.category] = {
+          totalProducts: 0,
+          totalStock: 0,
+          lowStockCount: 0,
+        };
+      }
+
+      categoryDistribution[product.category].totalProducts++;
+
+      product.variants.forEach((variant) => {
+        categoryDistribution[product.category].totalStock += variant.stock;
+
+        if (variant.stock <= 10 && variant.stock > 0) {
+          categoryDistribution[product.category].lowStockCount++;
+          lowStockAlerts.push({
+            productName: product.name,
+            variant: `${variant.size}/${variant.color}`,
+            currentStock: variant.stock,
+            sku: variant.sku,
+          });
+        }
+      });
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Inventory analytics retrieved successfully",
+      data: {
+        stockTrends,
+        categoryDistribution,
+        lowStockAlerts,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching inventory analytics:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching inventory analytics",
+    });
+  }
+};
+
 export {
   getCompleteAdminStatsController,
   getRecentActivityController,
   getBasicAdminStatsController,
   getAdminDashboardController,
   getDashboardAnalyticsController,
+  getInventoryDataController,
+  updateVariantStockController,
+  getInventoryAnalyticsController,
 };

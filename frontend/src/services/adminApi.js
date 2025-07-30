@@ -690,4 +690,120 @@ export const adminApi = {
       };
     }
   },
+
+  // Get inventory data for inventory management
+  getInventoryData: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/inventory`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch inventory data");
+      }
+
+      return {
+        success: true,
+        data: data.data,
+      };
+    } catch (error) {
+      console.error("Error fetching inventory data:", error);
+      return {
+        success: false,
+        message: error.message,
+        data: {
+          products: [],
+          stats: {
+            totalProducts: 0,
+            lowStockItems: 0,
+            outOfStockItems: 0,
+            totalValue: 0,
+            averageStockLevel: 0,
+          },
+        },
+      };
+    }
+  },
+
+  // Update variant stock level
+  updateVariantStock: async (variantId, stock, notes = "") => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/admin/inventory/variant/${variantId}`,
+        {
+          method: "PUT",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            stock,
+            notes,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to update stock");
+      }
+
+      return {
+        success: true,
+        data: data.data,
+        message: data.message,
+      };
+    } catch (error) {
+      console.error("Error updating stock:", error);
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  },
+
+  // Get inventory analytics
+  getInventoryAnalytics: async () => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/admin/inventory/analytics`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch inventory analytics");
+      }
+
+      return {
+        success: true,
+        data: data.data,
+      };
+    } catch (error) {
+      console.error("Error fetching inventory analytics:", error);
+      return {
+        success: false,
+        message: error.message,
+        data: {
+          stockTrends: [],
+          categoryDistribution: [],
+          lowStockAlerts: [],
+        },
+      };
+    }
+  },
 };

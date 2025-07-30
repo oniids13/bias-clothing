@@ -22,6 +22,9 @@ import {
   getBasicAdminStatsController,
   getAdminDashboardController,
   getDashboardAnalyticsController,
+  getInventoryDataController,
+  updateVariantStockController,
+  getInventoryAnalyticsController,
 } from "../controller/adminController.js";
 import { requireAuth } from "../middleware/auth.js";
 
@@ -86,5 +89,10 @@ router.get("/users", getAllUsersController);
 
 // Product Stats Routes
 router.get("/products/stats", getProductStatsController);
+
+// Inventory Management Routes
+router.get("/inventory", getInventoryDataController);
+router.put("/inventory/variant/:variantId", updateVariantStockController);
+router.get("/inventory/analytics", getInventoryAnalyticsController);
 
 export default router;

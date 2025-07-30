@@ -609,6 +609,39 @@ const getSingleProductForAdmin = async (productId) => {
   }
 };
 
+const updateVariantStock = async (variantId, stock, notes = "") => {
+  try {
+    const updatedVariant = await prisma.productVariant.update({
+      where: { id: variantId },
+      data: {
+        stock: stock,
+        updatedAt: new Date(),
+      },
+      include: {
+        product: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+          },
+        },
+      },
+    });
+
+    // Log the stock update for audit purposes
+    console.log(
+      `Stock updated for variant ${variantId}: ${stock} units${
+        notes ? ` - Notes: ${notes}` : ""
+      }`
+    );
+
+    return updatedVariant;
+  } catch (error) {
+    console.error("Error updating variant stock:", error);
+    throw error;
+  }
+};
+
 export {
   getAllProducts,
   getFeaturedProducts,
@@ -629,4 +662,5 @@ export {
   updateProduct,
   deleteProduct,
   getSingleProductForAdmin,
+  updateVariantStock,
 };
