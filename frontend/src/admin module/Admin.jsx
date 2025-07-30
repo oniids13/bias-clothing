@@ -64,6 +64,7 @@ const Admin = () => {
       icon: <ShoppingCartIcon className="h-8 w-8" />,
       color: "bg-orange-500",
       hoverColor: "hover:bg-orange-600",
+      onClick: () => navigate("/admin/orders"),
     },
     {
       title: "Customer Management",

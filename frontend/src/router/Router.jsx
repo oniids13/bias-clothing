@@ -25,6 +25,7 @@ import Admin from "../admin module/Admin";
 import Dashboard from "../admin module/Dashboard";
 import ProductManagement from "../admin module/ProductManagement";
 import InventoryManagement from "../admin module/InventoryManagement";
+import OrderManagement from "../admin module/OrderManagement";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -43,6 +44,22 @@ const router = createBrowserRouter(
           <ProtectedRoute>
             <Profile />
           </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/orders"
+        element={
+          <AdminProtectedRoute>
+            <OrderManagement />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/test"
+        element={
+          <AdminProtectedRoute>
+            <div>Test Route Working</div>
+          </AdminProtectedRoute>
         }
       />
       <Route

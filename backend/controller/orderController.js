@@ -1323,6 +1323,70 @@ const getCheckoutSessionController = async (req, res) => {
   }
 };
 
+// ============================================
+// INVOICE GENERATION CONTROLLER
+// ============================================
+
+const generateInvoiceController = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    // Get order details with all related data
+    const order = await getOrderById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    // For now, return a simple JSON response
+    // In a real implementation, you would generate a PDF using libraries like puppeteer or jsPDF
+    const invoiceData = {
+      invoiceNumber: `INV-${order.orderNumber}`,
+      orderNumber: order.orderNumber,
+      date: new Date().toISOString(),
+      customer: {
+        name: order.user?.name || "N/A",
+        email: order.user?.email || "N/A",
+        address: order.shippingAddress || "N/A",
+      },
+      items:
+        order.orderItems?.map((item) => ({
+          product: item.product?.name || "N/A",
+          variant: `${item.variant?.size || "N/A"} / ${
+            item.variant?.color || "N/A"
+          }`,
+          quantity: item.quantity,
+          price: item.price,
+          total: item.price * item.quantity,
+        })) || [],
+      summary: {
+        subtotal: order.subtotal || 0,
+        shipping: order.shipping || 0,
+        tax: order.tax || 0,
+        total: order.total,
+      },
+      paymentMethod: order.paymentMethod || "N/A",
+      paymentStatus: order.paymentStatus,
+      orderStatus: order.status,
+    };
+
+    res.status(200).json({
+      success: true,
+      message: "Invoice generated successfully",
+      data: invoiceData,
+    });
+  } catch (error) {
+    console.error("Error generating invoice:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to generate invoice",
+      error: error.message,
+    });
+  }
+};
+
 export {
   // Order controllers
   createOrderController,
@@ -1356,4 +1420,7 @@ export {
   attachPaymentMethodController,
   createCheckoutSessionController,
   getCheckoutSessionController,
+
+  // Invoice generation
+  generateInvoiceController,
 };

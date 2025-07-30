@@ -343,6 +343,95 @@ const getCheckoutSessionStatus = async (checkoutSessionId) => {
   }
 };
 
+// Admin functions
+const getOrdersForAdmin = async (options = {}) => {
+  try {
+    const queryParams = new URLSearchParams();
+
+    if (options.page) queryParams.append("page", options.page);
+    if (options.limit) queryParams.append("limit", options.limit);
+    if (options.search) queryParams.append("search", options.search);
+    if (options.status) queryParams.append("status", options.status);
+    if (options.paymentMethod)
+      queryParams.append("paymentMethod", options.paymentMethod);
+    if (options.dateFilter)
+      queryParams.append("dateFilter", options.dateFilter);
+
+    const response = await fetch(
+      `${API_BASE_URL}/admin/orders?${queryParams}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching orders for admin:", error);
+    return { success: false, message: error.message };
+  }
+};
+
+const updateOrderStatus = async (orderId, status) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/admin/orders/${orderId}/status`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ status }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error updating order status:", error);
+    return { success: false, message: error.message };
+  }
+};
+
+const generateInvoice = async (orderId) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/admin/orders/${orderId}/invoice`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    // Handle PDF blob response
+    const blob = await response.blob();
+    return { success: true, data: blob };
+  } catch (error) {
+    console.error("Error generating invoice:", error);
+    return { success: false, message: error.message };
+  }
+};
+
 export const orderApi = {
   createAddress,
   createOrder,
@@ -359,4 +448,9 @@ export const orderApi = {
   confirmPayment,
   createCheckoutSession,
   getCheckoutSessionStatus,
+
+  // Admin functions
+  getOrdersForAdmin,
+  updateOrderStatus,
+  generateInvoice,
 };

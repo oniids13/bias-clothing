@@ -26,6 +26,11 @@ import {
   updateVariantStockController,
   getInventoryAnalyticsController,
 } from "../controller/adminController.js";
+import {
+  getAllOrdersController,
+  updateOrderStatusController,
+  generateInvoiceController,
+} from "../controller/orderController.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -94,5 +99,10 @@ router.get("/products/stats", getProductStatsController);
 router.get("/inventory", getInventoryDataController);
 router.put("/inventory/variant/:variantId", updateVariantStockController);
 router.get("/inventory/analytics", getInventoryAnalyticsController);
+
+// Order Management Routes
+router.get("/orders", getAllOrdersController);
+router.put("/orders/:orderId/status", updateOrderStatusController);
+router.get("/orders/:orderId/invoice", generateInvoiceController);
 
 export default router;
