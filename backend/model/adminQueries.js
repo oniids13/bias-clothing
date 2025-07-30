@@ -203,18 +203,22 @@ const getRevenueTrendData = async () => {
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-    // Get orders grouped by month for the last 6 months - only PAID and DELIVERED
+    // Get orders grouped by month for the last 6 months - include more statuses for better data
     const orders = await prisma.order.findMany({
       where: {
         createdAt: {
           gte: sixMonthsAgo,
         },
-        status: "DELIVERED",
-        paymentStatus: "PAID",
+        // Include CONFIRMED, PROCESSING, SHIPPED, and DELIVERED orders
+        status: {
+          in: ["CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED"],
+        },
       },
       select: {
         total: true,
         createdAt: true,
+        status: true,
+        paymentStatus: true,
       },
     });
 
@@ -222,12 +226,21 @@ const getRevenueTrendData = async () => {
     const monthlyRevenue = {};
     const months = [];
 
-    // Initialize last 6 months
+    // Initialize last 6 months including current month
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+
     for (let i = 5; i >= 0; i--) {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      const monthKey = date.toISOString().slice(0, 7); // YYYY-MM format
-      const monthName = date.toLocaleDateString("en-US", { month: "short" });
+      const targetDate = new Date(currentYear, currentMonth - i, 1);
+      // Fix timezone issue by using UTC
+      const monthKey = `${targetDate.getFullYear()}-${String(
+        targetDate.getMonth() + 1
+      ).padStart(2, "0")}`;
+      const monthName = targetDate.toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+      });
       months.push(monthName);
       monthlyRevenue[monthKey] = 0;
     }
@@ -306,12 +319,21 @@ const getUserGrowthData = async () => {
     const monthlyUsers = {};
     const months = [];
 
-    // Initialize last 6 months
+    // Initialize last 6 months including current month
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+
     for (let i = 5; i >= 0; i--) {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      const monthKey = date.toISOString().slice(0, 7); // YYYY-MM format
-      const monthName = date.toLocaleDateString("en-US", { month: "short" });
+      const targetDate = new Date(currentYear, currentMonth - i, 1);
+      // Fix timezone issue by using UTC
+      const monthKey = `${targetDate.getFullYear()}-${String(
+        targetDate.getMonth() + 1
+      ).padStart(2, "0")}`;
+      const monthName = targetDate.toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+      });
       months.push(monthName);
       monthlyUsers[monthKey] = 0;
     }
