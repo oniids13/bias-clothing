@@ -72,6 +72,7 @@ const Admin = () => {
       icon: <PeopleIcon className="h-8 w-8" />,
       color: "bg-green-500",
       hoverColor: "hover:bg-green-600",
+      onClick: () => navigate("/admin/customer"),
     },
     {
       title: "Sales Analytics",
@@ -79,6 +80,7 @@ const Admin = () => {
       icon: <AnalyticsIcon className="h-8 w-8" />,
       color: "bg-indigo-500",
       hoverColor: "hover:bg-indigo-600",
+      onClick: () => navigate("/admin/analytics"),
     },
   ];
 

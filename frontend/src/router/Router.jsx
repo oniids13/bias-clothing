@@ -26,6 +26,8 @@ import Dashboard from "../admin module/Dashboard";
 import ProductManagement from "../admin module/ProductManagement";
 import InventoryManagement from "../admin module/InventoryManagement";
 import OrderManagement from "../admin module/OrderManagement";
+import SalesAnalytics from "../admin module/SalesAnalytics";
+import CustomerManagement from "../admin module/CustomerManagement";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -59,6 +61,22 @@ const router = createBrowserRouter(
         element={
           <AdminProtectedRoute>
             <div>Test Route Working</div>
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/customer"
+        element={
+          <AdminProtectedRoute>
+            <CustomerManagement />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/analytics"
+        element={
+          <AdminProtectedRoute>
+            <SalesAnalytics />
           </AdminProtectedRoute>
         }
       />
