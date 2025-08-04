@@ -406,6 +406,32 @@ const updateOrderStatus = async (orderId, status) => {
   }
 };
 
+const updatePaymentStatus = async (orderId, paymentStatus) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/admin/orders/${orderId}/payment-status`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ paymentStatus }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error updating payment status:", error);
+    return { success: false, message: error.message };
+  }
+};
+
 const generateInvoice = async (orderId) => {
   try {
     const response = await fetch(
@@ -476,5 +502,6 @@ export const orderApi = {
   // Admin functions
   getOrdersForAdmin,
   updateOrderStatus,
+  updatePaymentStatus,
   generateInvoice,
 };

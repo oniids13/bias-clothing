@@ -53,6 +53,7 @@ const OrderManagement = () => {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [updatingOrder, setUpdatingOrder] = useState(null);
   const [newStatus, setNewStatus] = useState("");
+  const [newPaymentStatus, setNewPaymentStatus] = useState("");
   const [statusLoading, setStatusLoading] = useState(false);
 
   // Success/notification states
@@ -98,17 +99,73 @@ const OrderManagement = () => {
     },
   ];
 
+  // Payment status options
+  const paymentStatuses = [
+    {
+      value: "PENDING",
+      label: "Pending",
+      color: "bg-yellow-100 text-yellow-800",
+    },
+    {
+      value: "PAID",
+      label: "Paid",
+      color: "bg-green-100 text-green-800",
+    },
+    {
+      value: "FAILED",
+      label: "Failed",
+      color: "bg-red-100 text-red-800",
+    },
+    {
+      value: "REFUNDED",
+      label: "Refunded",
+      color: "bg-gray-100 text-gray-800",
+    },
+    {
+      value: "PARTIALLY_REFUNDED",
+      label: "Partially Refunded",
+      color: "bg-orange-100 text-orange-800",
+    },
+  ];
+
   // Payment method icons
   const getPaymentIcon = (method) => {
     switch (method?.toLowerCase()) {
       case "card":
       case "credit_card":
+      case "credit card":
+      case "debit":
+      case "debit card":
         return CreditCardIcon;
       case "gcash":
-      case "paymaya":
+      case "g-cash":
+      case "g cash":
         return AccountBalanceWalletIcon;
       default:
         return PaymentIcon;
+    }
+  };
+
+  // Normalize payment method display
+  const normalizePaymentMethod = (method) => {
+    if (!method) return "Not specified";
+
+    const normalized = method.toLowerCase().trim();
+
+    switch (normalized) {
+      case "gcash":
+      case "g-cash":
+      case "g cash":
+        return "GCash";
+      case "card":
+      case "credit_card":
+      case "credit card":
+      case "debit":
+      case "debit card":
+        return "Card";
+      default:
+        // Return the original method if it doesn't match any known patterns
+        return method;
     }
   };
 
@@ -190,6 +247,7 @@ const OrderManagement = () => {
   const handleUpdateStatus = (order) => {
     setUpdatingOrder(order);
     setNewStatus(order.status);
+    setNewPaymentStatus(order.paymentStatus);
     setShowStatusModal(true);
   };
 
@@ -211,12 +269,43 @@ const OrderManagement = () => {
         setShowStatusModal(false);
         setUpdatingOrder(null);
         setNewStatus("");
+        setNewPaymentStatus("");
       } else {
         setError(result.message || "Failed to update order status");
       }
     } catch (error) {
       console.error("Error updating order status:", error);
       setError("Failed to update order status");
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+
+  const confirmPaymentStatusUpdate = async () => {
+    if (!updatingOrder || !newPaymentStatus) return;
+
+    try {
+      setStatusLoading(true);
+      const result = await orderApi.updatePaymentStatus(
+        updatingOrder.id,
+        newPaymentStatus
+      );
+
+      if (result.success) {
+        setSuccessMessage(
+          `Order #${updatingOrder.orderNumber} payment status updated to ${newPaymentStatus}`
+        );
+        fetchOrders();
+        setShowStatusModal(false);
+        setUpdatingOrder(null);
+        setNewStatus("");
+        setNewPaymentStatus("");
+      } else {
+        setError(result.message || "Failed to update payment status");
+      }
+    } catch (error) {
+      console.error("Error updating payment status:", error);
+      setError("Failed to update payment status");
     } finally {
       setStatusLoading(false);
     }
@@ -349,7 +438,7 @@ const OrderManagement = () => {
                       return <PaymentIcon className="h-4 w-4 text-gray-600" />;
                     })()}
                     <span className="text-sm text-gray-600">
-                      {viewingOrder.paymentMethod || "Not specified"}
+                      {normalizePaymentMethod(viewingOrder.paymentMethod)}
                     </span>
                   </div>
                   <p className="text-sm text-gray-600">
@@ -515,7 +604,7 @@ const OrderManagement = () => {
               className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
             >
               <EditIcon className="h-4 w-4" />
-              <span>Update Status</span>
+              <span>Update Order</span>
             </button>
           </div>
         </div>
@@ -525,6 +614,8 @@ const OrderManagement = () => {
 
   // Status Update Modal Component
   const StatusUpdateModal = () => {
+    const [activeTab, setActiveTab] = useState("order"); // "order" or "payment"
+
     if (!showStatusModal || !updatingOrder) return null;
 
     return (
@@ -536,7 +627,7 @@ const OrderManagement = () => {
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900">
-                Update Order Status
+                Update Order Details
               </h3>
               <p className="text-sm text-gray-600">
                 Order #{updatingOrder.orderNumber}
@@ -544,22 +635,69 @@ const OrderManagement = () => {
             </div>
           </div>
 
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select New Status
-            </label>
-            <select
-              value={newStatus}
-              onChange={(e) => setNewStatus(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          {/* Tabs */}
+          <div className="flex mb-6 border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab("order")}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "order"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
             >
-              {orderStatuses.map((status) => (
-                <option key={status.value} value={status.value}>
-                  {status.label}
-                </option>
-              ))}
-            </select>
+              Order Status
+            </button>
+            <button
+              onClick={() => setActiveTab("payment")}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "payment"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Payment Status
+            </button>
           </div>
+
+          {/* Order Status Tab */}
+          {activeTab === "order" && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select New Order Status
+              </label>
+              <select
+                value={newStatus}
+                onChange={(e) => setNewStatus(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                {orderStatuses.map((status) => (
+                  <option key={status.value} value={status.value}>
+                    {status.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Payment Status Tab */}
+          {activeTab === "payment" && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select New Payment Status
+              </label>
+              <select
+                value={newPaymentStatus}
+                onChange={(e) => setNewPaymentStatus(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                {paymentStatuses.map((status) => (
+                  <option key={status.value} value={status.value}>
+                    {status.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="flex space-x-3">
             <button
@@ -567,6 +705,7 @@ const OrderManagement = () => {
                 setShowStatusModal(false);
                 setUpdatingOrder(null);
                 setNewStatus("");
+                setNewPaymentStatus("");
               }}
               disabled={statusLoading}
               className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
@@ -574,14 +713,23 @@ const OrderManagement = () => {
               Cancel
             </button>
             <button
-              onClick={confirmStatusUpdate}
-              disabled={statusLoading || newStatus === updatingOrder.status}
+              onClick={
+                activeTab === "order"
+                  ? confirmStatusUpdate
+                  : confirmPaymentStatusUpdate
+              }
+              disabled={
+                statusLoading ||
+                (activeTab === "order" && newStatus === updatingOrder.status) ||
+                (activeTab === "payment" &&
+                  newPaymentStatus === updatingOrder.paymentStatus)
+              }
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center"
             >
               {statusLoading ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
               ) : (
-                "Update Status"
+                `Update ${activeTab === "order" ? "Status" : "Payment Status"}`
               )}
             </button>
           </div>
@@ -823,7 +971,7 @@ const OrderManagement = () => {
                             <div className="flex items-center space-x-2">
                               <PaymentIcon className="h-4 w-4 text-gray-600" />
                               <span className="text-sm text-gray-900">
-                                {order.paymentMethod || "N/A"}
+                                {normalizePaymentMethod(order.paymentMethod)}
                               </span>
                             </div>
                             <span
@@ -868,7 +1016,7 @@ const OrderManagement = () => {
                             <button
                               onClick={() => handleUpdateStatus(order)}
                               className="text-green-600 hover:text-green-900 transition-colors p-1 rounded-md hover:bg-green-50"
-                              title="Update Status"
+                              title="Update Order & Payment Status"
                             >
                               <EditIcon className="h-5 w-5" />
                             </button>

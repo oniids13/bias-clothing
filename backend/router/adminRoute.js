@@ -29,6 +29,7 @@ import {
 import {
   getAllOrdersController,
   updateOrderStatusController,
+  updatePaymentStatusController,
   generateInvoiceController,
 } from "../controller/orderController.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -103,6 +104,7 @@ router.get("/inventory/analytics", getInventoryAnalyticsController);
 // Order Management Routes
 router.get("/orders", getAllOrdersController);
 router.put("/orders/:orderId/status", updateOrderStatusController);
+router.put("/orders/:orderId/payment-status", updatePaymentStatusController);
 router.get("/orders/:orderId/invoice", generateInvoiceController);
 
 export default router;
