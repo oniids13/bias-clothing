@@ -432,12 +432,36 @@ const generateInvoice = async (orderId) => {
   }
 };
 
+// Cancel order (for customers)
+const cancelOrder = async (orderId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/order/${orderId}/cancel`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error cancelling order:", error);
+    return { success: false, message: error.message };
+  }
+};
+
 export const orderApi = {
   createAddress,
   createOrder,
   checkStock,
   getUserOrders,
   getOrderById,
+  cancelOrder,
 
   // PayMongo integration
   createPaymentIntent,

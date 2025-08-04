@@ -422,6 +422,66 @@ const deleteOrderController = async (req, res) => {
   }
 };
 
+// Cancel order (for customers - only pending orders)
+const cancelOrderController = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.user.id; // Get current user ID from auth middleware
+
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        message: "Order ID is required",
+      });
+    }
+
+    // Get the order to check if it belongs to the user and is pending
+    const order = await getOrderById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    // Check if the order belongs to the current user
+    if (order.userId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only cancel your own orders",
+      });
+    }
+
+    // Check if the order is in PENDING status
+    if (order.status !== "PENDING") {
+      return res.status(400).json({
+        success: false,
+        message: "Only pending orders can be cancelled",
+      });
+    }
+
+    // Cancel the order with stock restoration
+    const cancelledOrder = await updateOrderStatusWithStockManagement(
+      orderId,
+      "CANCELLED"
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Order cancelled successfully",
+      data: cancelledOrder,
+    });
+  } catch (error) {
+    console.error("Cancel order error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to cancel order",
+      error: error.message,
+    });
+  }
+};
+
 // Get order statistics (Admin)
 const getOrderStatsController = async (req, res) => {
   try {
@@ -1397,6 +1457,7 @@ export {
   updatePaymentStatusController,
   updateTrackingNumberController,
   deleteOrderController,
+  cancelOrderController, // Added cancelOrderController
   getOrderStatsController,
 
   // Stock management controllers

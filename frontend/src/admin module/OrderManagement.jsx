@@ -387,11 +387,30 @@ const OrderManagement = () => {
                       {viewingOrder.user?.email || "N/A"}
                     </p>
                   </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Phone</p>
+                    <p className="font-medium">
+                      {viewingOrder.user?.phone || "N/A"}
+                    </p>
+                  </div>
                   <div className="md:col-span-2">
                     <p className="text-sm text-gray-600">Shipping Address</p>
-                    <p className="font-medium">
-                      {viewingOrder.shippingAddress || "N/A"}
-                    </p>
+                    {viewingOrder.address ? (
+                      <div className="font-medium">
+                        <div>{viewingOrder.address.street}</div>
+                        <div>{viewingOrder.address.barangay}</div>
+                        <div>
+                          {viewingOrder.address.city},{" "}
+                          {viewingOrder.address.state}{" "}
+                          {viewingOrder.address.zipCode}
+                        </div>
+                        <div>{viewingOrder.address.country}</div>
+                      </div>
+                    ) : (
+                      <p className="font-medium text-gray-500">
+                        No address provided
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -779,6 +798,9 @@ const OrderManagement = () => {
                             </div>
                             <div className="text-sm text-gray-500">
                               {order.user?.email || "N/A"}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {order.user?.phone || "No phone"}
                             </div>
                           </div>
                         </td>

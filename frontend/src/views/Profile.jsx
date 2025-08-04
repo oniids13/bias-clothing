@@ -83,6 +83,31 @@ const Profile = () => {
     }
   };
 
+  const handleCancelOrder = async (orderId) => {
+    if (
+      !confirm(
+        "Are you sure you want to cancel this order? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await orderApi.cancelOrder(orderId);
+      if (response.success) {
+        setSuccess("Order cancelled successfully");
+        // Refresh the orders list
+        fetchUserOrders();
+        setTimeout(() => setSuccess(""), 3000);
+      } else {
+        setError(response.message || "Failed to cancel order");
+      }
+    } catch (error) {
+      console.error("Error cancelling order:", error);
+      setError("Failed to cancel order");
+    }
+  };
+
   const getStatusColor = (status) => {
     const statusColors = {
       PENDING: "bg-yellow-100 text-yellow-800",
@@ -513,12 +538,22 @@ const Profile = () => {
                           <p className="text-lg font-semibold text-gray-900">
                             ₱{order.total.toFixed(2)}
                           </p>
-                          <button
-                            onClick={() => handleViewOrderDetails(order.id)}
-                            className="text-blue-600 hover:text-blue-800 text-sm mt-1"
-                          >
-                            View Details
-                          </button>
+                          <div className="flex flex-col gap-1 mt-1">
+                            <button
+                              onClick={() => handleViewOrderDetails(order.id)}
+                              className="text-blue-600 hover:text-blue-800 text-sm"
+                            >
+                              View Details
+                            </button>
+                            {order.status === "PENDING" && (
+                              <button
+                                onClick={() => handleCancelOrder(order.id)}
+                                className="text-red-600 hover:text-red-800 text-sm"
+                              >
+                                Cancel Order
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -901,6 +936,21 @@ const Profile = () => {
                 <p className="text-sm bg-gray-50 p-2 rounded">
                   {selectedOrder.customerNotes}
                 </p>
+              </div>
+            )}
+
+            {/* Cancel Button for Pending Orders */}
+            {selectedOrder.status === "PENDING" && (
+              <div className="mt-6 pt-4 border-t">
+                <button
+                  onClick={() => {
+                    handleCancelOrder(selectedOrder.id);
+                    setShowOrderDetails(false);
+                  }}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition-colors"
+                >
+                  Cancel Order
+                </button>
               </div>
             )}
           </div>

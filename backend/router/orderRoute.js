@@ -10,6 +10,7 @@ import {
   updateTrackingNumberController,
   deleteOrderController,
   getOrderStatsController,
+  cancelOrderController,
 
   // Stock management controllers
   checkStockController,
@@ -72,6 +73,9 @@ router.patch("/:orderId/tracking", requireAuth, updateTrackingNumberController);
 
 // Cancel/Delete order (Protected - User can cancel own orders, Admin can cancel any)
 router.delete("/:orderId", requireAuth, deleteOrderController);
+
+// Cancel order (for customers - only pending orders)
+router.put("/:orderId/cancel", requireAuth, cancelOrderController);
 
 // ============================================
 // STOCK MANAGEMENT ROUTES
