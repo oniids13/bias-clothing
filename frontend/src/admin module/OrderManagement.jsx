@@ -24,7 +24,6 @@ import PrintIcon from "@mui/icons-material/Print";
 import DownloadIcon from "@mui/icons-material/Download";
 
 const OrderManagement = () => {
-  console.log("OrderManagement component loaded");
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -530,35 +529,68 @@ const OrderManagement = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {viewingOrder.orderItems?.map((item, index) => (
-                      <tr key={index}>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center space-x-3">
-                            <img
-                              src={
-                                item.product?.imageUrl?.[0] ||
-                                "/src/images/bias_logo.png"
-                              }
-                              alt={item.product?.name}
-                              className="h-10 w-10 rounded-lg object-cover"
-                            />
-                            <span className="font-medium text-sm">
-                              {item.product?.name}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          {item.variant?.size} / {item.variant?.color}
-                        </td>
-                        <td className="px-4 py-3 text-sm">{item.quantity}</td>
-                        <td className="px-4 py-3 text-sm">
-                          {formatCurrency(item.price)}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-medium">
-                          {formatCurrency(item.price * item.quantity)}
-                        </td>
-                      </tr>
-                    ))}
+                    {(() => {
+                      const orderItems =
+                        viewingOrder.items || viewingOrder.orderItems || [];
+
+                      if (orderItems.length === 0) {
+                        return (
+                          <tr>
+                            <td
+                              colSpan="5"
+                              className="px-4 py-8 text-center text-gray-500"
+                            >
+                              No order items found
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return orderItems.map((item, index) => {
+                        // Handle different possible data structures
+                        const productName =
+                          item.product?.name ||
+                          item.productName ||
+                          "Unknown Product";
+                        const productImage =
+                          item.product?.imageUrl?.[0] ||
+                          "/src/images/bias_logo.png";
+                        const size = item.size || item.variant?.size || "N/A";
+                        const color =
+                          item.color || item.variant?.color || "N/A";
+                        const quantity = item.quantity || 0;
+                        const unitPrice = item.unitPrice || item.price || 0;
+                        const totalPrice =
+                          item.totalPrice || unitPrice * quantity;
+
+                        return (
+                          <tr key={index}>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center space-x-3">
+                                <img
+                                  src={productImage}
+                                  alt={productName}
+                                  className="h-10 w-10 rounded-lg object-cover"
+                                />
+                                <span className="font-medium text-sm">
+                                  {productName}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              {size} / {color}
+                            </td>
+                            <td className="px-4 py-3 text-sm">{quantity}</td>
+                            <td className="px-4 py-3 text-sm">
+                              {formatCurrency(unitPrice)}
+                            </td>
+                            <td className="px-4 py-3 text-sm font-medium">
+                              {formatCurrency(totalPrice)}
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
                   </tbody>
                 </table>
               </div>
