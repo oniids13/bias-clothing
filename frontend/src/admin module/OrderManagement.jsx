@@ -190,7 +190,7 @@ const OrderManagement = () => {
 
       if (debouncedSearchTerm) options.search = debouncedSearchTerm;
       if (statusFilter) options.status = statusFilter;
-      if (paymentFilter) options.paymentMethod = paymentFilter;
+      if (paymentFilter) options.paymentStatus = paymentFilter;
       if (dateFilter) options.dateFilter = dateFilter;
       if (showSuccessfulOrders) options.successfulOnly = true;
 

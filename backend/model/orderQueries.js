@@ -220,7 +220,16 @@ const getOrdersByUser = async (userId, options = {}) => {
 // Get all orders (admin function)
 const getAllOrders = async (options = {}) => {
   try {
-    const { page = 1, limit = 20, status, search, successfulOnly } = options;
+    const {
+      page = 1,
+      limit = 20,
+      status,
+      search,
+      successfulOnly,
+      paymentMethod,
+      dateFilter,
+      paymentStatus,
+    } = options;
     const skip = (page - 1) * limit;
 
     const where = {};
@@ -229,16 +238,103 @@ const getAllOrders = async (options = {}) => {
     if (successfulOnly) {
       where.AND = [{ status: "DELIVERED" }, { paymentStatus: "PAID" }];
     } else {
-      // Exclude successful orders from main orders table
-      where.NOT = {
-        AND: [{ status: "DELIVERED" }, { paymentStatus: "PAID" }],
-      };
+      // Only exclude successful orders if no specific filters are applied
+      const hasSpecificFilters =
+        status || paymentStatus || paymentMethod || dateFilter;
 
-      if (status) {
+      if (!hasSpecificFilters) {
+        // Exclude successful orders from main orders table only when no specific filters
+        where.NOT = {
+          AND: [{ status: "DELIVERED" }, { paymentStatus: "PAID" }],
+        };
+      }
+    }
+
+    // Add status filter (only if not showing successful orders)
+    if (status && !successfulOnly) {
+      if (where.NOT) {
+        // If we have NOT condition, we need to use AND to combine conditions
+        where.AND = [where.NOT, { status: status }];
+        delete where.NOT;
+      } else if (where.AND) {
+        where.AND.push({ status: status });
+      } else {
         where.status = status;
       }
     }
 
+    // Add payment status filter
+    if (paymentStatus) {
+      const paymentStatusCondition = { paymentStatus: paymentStatus };
+
+      if (where.AND) {
+        where.AND.push(paymentStatusCondition);
+      } else if (where.NOT) {
+        where.AND = [where.NOT, paymentStatusCondition];
+        delete where.NOT;
+      } else {
+        where.paymentStatus = paymentStatus;
+      }
+    }
+
+    // Add payment method filter
+    if (paymentMethod) {
+      const paymentCondition = {
+        paymentMethod: { contains: paymentMethod, mode: "insensitive" },
+      };
+
+      if (where.AND) {
+        where.AND.push(paymentCondition);
+      } else if (where.NOT) {
+        where.AND = [where.NOT, paymentCondition];
+        delete where.NOT;
+      } else {
+        where.paymentMethod = { contains: paymentMethod, mode: "insensitive" };
+      }
+    }
+
+    // Add date filter
+    if (dateFilter) {
+      const now = new Date();
+      let startDate = new Date();
+
+      switch (dateFilter) {
+        case "today":
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case "week":
+          startDate.setDate(now.getDate() - 7);
+          break;
+        case "month":
+          startDate.setMonth(now.getMonth() - 1);
+          break;
+        case "quarter":
+          startDate.setMonth(now.getMonth() - 3);
+          break;
+        default:
+          startDate = null;
+      }
+
+      if (startDate) {
+        const dateCondition = {
+          createdAt: {
+            gte: startDate,
+            lte: now,
+          },
+        };
+
+        if (where.AND) {
+          where.AND.push(dateCondition);
+        } else if (where.NOT) {
+          where.AND = [where.NOT, dateCondition];
+          delete where.NOT;
+        } else {
+          where.createdAt = dateCondition.createdAt;
+        }
+      }
+    }
+
+    // Add search condition
     if (search) {
       const searchCondition = {
         OR: [

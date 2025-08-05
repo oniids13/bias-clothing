@@ -354,6 +354,8 @@ const getOrdersForAdmin = async (options = {}) => {
     if (options.status) queryParams.append("status", options.status);
     if (options.paymentMethod)
       queryParams.append("paymentMethod", options.paymentMethod);
+    if (options.paymentStatus)
+      queryParams.append("paymentStatus", options.paymentStatus);
     if (options.dateFilter)
       queryParams.append("dateFilter", options.dateFilter);
     if (options.successfulOnly)
