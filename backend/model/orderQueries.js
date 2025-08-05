@@ -220,19 +220,43 @@ const getOrdersByUser = async (userId, options = {}) => {
 // Get all orders (admin function)
 const getAllOrders = async (options = {}) => {
   try {
-    const { page = 1, limit = 20, status, search } = options;
+    const { page = 1, limit = 20, status, search, successfulOnly } = options;
     const skip = (page - 1) * limit;
 
     const where = {};
-    if (status) {
-      where.status = status;
+
+    // Handle successful orders filter
+    if (successfulOnly) {
+      where.AND = [{ status: "DELIVERED" }, { paymentStatus: "PAID" }];
+    } else {
+      // Exclude successful orders from main orders table
+      where.NOT = {
+        AND: [{ status: "DELIVERED" }, { paymentStatus: "PAID" }],
+      };
+
+      if (status) {
+        where.status = status;
+      }
     }
+
     if (search) {
-      where.OR = [
-        { orderNumber: { contains: search, mode: "insensitive" } },
-        { user: { name: { contains: search, mode: "insensitive" } } },
-        { user: { email: { contains: search, mode: "insensitive" } } },
-      ];
+      const searchCondition = {
+        OR: [
+          { orderNumber: { contains: search, mode: "insensitive" } },
+          { user: { name: { contains: search, mode: "insensitive" } } },
+          { user: { email: { contains: search, mode: "insensitive" } } },
+        ],
+      };
+
+      if (where.AND) {
+        where.AND.push(searchCondition);
+      } else if (where.NOT) {
+        // If we have NOT condition, we need to restructure
+        where.AND = [where.NOT, searchCondition];
+        delete where.NOT;
+      } else {
+        where.OR = searchCondition.OR;
+      }
     }
 
     const [orders, totalCount] = await Promise.all([

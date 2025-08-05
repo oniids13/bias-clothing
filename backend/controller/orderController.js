@@ -231,13 +231,14 @@ const getOrdersByUserController = async (req, res) => {
 // Get all orders (Admin)
 const getAllOrdersController = async (req, res) => {
   try {
-    const { page = 1, limit = 20, status, search } = req.query;
+    const { page = 1, limit = 20, status, search, successfulOnly } = req.query;
 
     const options = {
       page: parseInt(page),
       limit: parseInt(limit),
       status,
       search,
+      successfulOnly: successfulOnly === "true",
     };
 
     const result = await getAllOrders(options);

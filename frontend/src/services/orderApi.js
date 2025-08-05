@@ -356,6 +356,8 @@ const getOrdersForAdmin = async (options = {}) => {
       queryParams.append("paymentMethod", options.paymentMethod);
     if (options.dateFilter)
       queryParams.append("dateFilter", options.dateFilter);
+    if (options.successfulOnly)
+      queryParams.append("successfulOnly", options.successfulOnly);
 
     const response = await fetch(
       `${API_BASE_URL}/admin/orders?${queryParams}`,

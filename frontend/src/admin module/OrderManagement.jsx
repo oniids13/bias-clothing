@@ -45,6 +45,7 @@ const OrderManagement = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+  const [showSuccessfulOrders, setShowSuccessfulOrders] = useState(false);
 
   // Modal states
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -191,6 +192,7 @@ const OrderManagement = () => {
       if (statusFilter) options.status = statusFilter;
       if (paymentFilter) options.paymentMethod = paymentFilter;
       if (dateFilter) options.dateFilter = dateFilter;
+      if (showSuccessfulOrders) options.successfulOnly = true;
 
       const result = await orderApi.getOrdersForAdmin(options);
 
@@ -212,6 +214,7 @@ const OrderManagement = () => {
     statusFilter,
     paymentFilter,
     dateFilter,
+    showSuccessfulOrders,
   ]);
 
   useEffect(() => {
@@ -628,16 +631,18 @@ const OrderManagement = () => {
               <DownloadIcon className="h-4 w-4" />
               <span>Download Invoice</span>
             </button>
-            <button
-              onClick={() => {
-                setShowDetailsModal(false);
-                handleUpdateStatus(viewingOrder);
-              }}
-              className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              <EditIcon className="h-4 w-4" />
-              <span>Update Order</span>
-            </button>
+            {!showSuccessfulOrders && (
+              <button
+                onClick={() => {
+                  setShowDetailsModal(false);
+                  handleUpdateStatus(viewingOrder);
+                }}
+                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                <EditIcon className="h-4 w-4" />
+                <span>Update Order</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -829,6 +834,13 @@ const OrderManagement = () => {
             <ArrowBackIcon className="h-5 w-5" />
             <span className="text-sm font-medium">Back to Admin</span>
           </button>
+
+          {/* Successful Orders Indicator */}
+          <div className="flex items-center space-x-2 text-sm text-gray-600">
+            <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+              View Successful Orders
+            </span>
+          </div>
         </DashboardHeader>
 
         {/* Search and Filter Section */}
@@ -850,6 +862,23 @@ const OrderManagement = () => {
 
             {/* Filters */}
             <div className="flex flex-wrap gap-3">
+              {/* Successful Orders Toggle */}
+              <button
+                onClick={() => {
+                  setShowSuccessfulOrders(!showSuccessfulOrders);
+                  setCurrentPage(1);
+                }}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  showSuccessfulOrders
+                    ? "bg-green-100 text-green-700 border border-green-300"
+                    : "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200"
+                }`}
+              >
+                {showSuccessfulOrders
+                  ? "✓ Viewing Successful Orders"
+                  : "View Successful Orders"}
+              </button>
+
               {/* Status Filter */}
               <div className="flex items-center space-x-2">
                 <FilterListIcon className="h-5 w-5 text-gray-400" />
@@ -908,8 +937,20 @@ const OrderManagement = () => {
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900">
-              Orders ({pagination.totalCount})
+              {showSuccessfulOrders
+                ? "Successful Order History"
+                : "Active Orders"}{" "}
+              ({pagination.totalCount})
             </h2>
+            {showSuccessfulOrders ? (
+              <p className="text-sm text-gray-600 mt-1">
+                Showing delivered and paid orders
+              </p>
+            ) : (
+              <p className="text-sm text-gray-600 mt-1">
+                Orders that need attention or are in progress
+              </p>
+            )}
           </div>
 
           {error && (
@@ -1044,14 +1085,16 @@ const OrderManagement = () => {
                               <VisibilityIcon className="h-5 w-5" />
                             </button>
 
-                            {/* Update Status */}
-                            <button
-                              onClick={() => handleUpdateStatus(order)}
-                              className="text-green-600 hover:text-green-900 transition-colors p-1 rounded-md hover:bg-green-50"
-                              title="Update Order & Payment Status"
-                            >
-                              <EditIcon className="h-5 w-5" />
-                            </button>
+                            {/* Update Status - Only show for non-successful orders */}
+                            {!showSuccessfulOrders && (
+                              <button
+                                onClick={() => handleUpdateStatus(order)}
+                                className="text-green-600 hover:text-green-900 transition-colors p-1 rounded-md hover:bg-green-50"
+                                title="Update Order & Payment Status"
+                              >
+                                <EditIcon className="h-5 w-5" />
+                              </button>
+                            )}
 
                             {/* Generate Invoice */}
                             <button
@@ -1074,10 +1117,14 @@ const OrderManagement = () => {
                           <SearchIcon className="h-8 w-8 text-gray-400" />
                         </div>
                         <p className="text-gray-500 font-medium">
-                          No orders found
+                          {showSuccessfulOrders
+                            ? "No successful orders found"
+                            : "No active orders found"}
                         </p>
                         <p className="text-gray-400 text-sm mt-1">
-                          Try adjusting your search or filter criteria
+                          {showSuccessfulOrders
+                            ? "Delivered and paid orders will appear here"
+                            : "All orders are either completed or need attention"}
                         </p>
                       </div>
                     </td>
