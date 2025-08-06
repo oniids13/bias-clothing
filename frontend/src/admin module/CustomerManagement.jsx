@@ -44,7 +44,9 @@ const CustomerManagement = () => {
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
+  // Remove roleFilter and add active/inactive filter and sorting
+  const [statusFilter, setStatusFilter] = useState(""); // "active", "inactive", or ""
+  const [sortByOrders, setSortByOrders] = useState(null); // null, "asc", or "desc"
 
   // Modal states
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -84,12 +86,31 @@ const CustomerManagement = () => {
       };
 
       if (debouncedSearchTerm) options.search = debouncedSearchTerm;
-      if (roleFilter) options.role = roleFilter;
+      // No role filter
 
       const result = await adminApi.getAllCustomers(options);
 
       if (result.success) {
-        setCustomers(result.data);
+        let filtered = result.data;
+        // Filter by active/inactive
+        if (statusFilter === "active") {
+          filtered = filtered.filter((c) => c._count?.orders > 0);
+        } else if (statusFilter === "inactive") {
+          filtered = filtered.filter(
+            (c) => !c._count?.orders || c._count.orders === 0
+          );
+        }
+        // Sort by number of orders
+        if (sortByOrders === "asc") {
+          filtered = filtered
+            .slice()
+            .sort((a, b) => (a._count?.orders || 0) - (b._count?.orders || 0));
+        } else if (sortByOrders === "desc") {
+          filtered = filtered
+            .slice()
+            .sort((a, b) => (b._count?.orders || 0) - (a._count?.orders || 0));
+        }
+        setCustomers(filtered);
         setPagination(result.pagination);
       } else {
         setError(result.message || "Failed to fetch customers");
@@ -100,7 +121,7 @@ const CustomerManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, debouncedSearchTerm, roleFilter]);
+  }, [currentPage, debouncedSearchTerm, statusFilter, sortByOrders]);
 
   useEffect(() => {
     fetchCustomers();
@@ -687,21 +708,51 @@ const CustomerManagement = () => {
               </div>
             </form>
 
-            {/* Role Filter */}
+            {/* Status Filter */}
             <div className="flex items-center space-x-2">
               <FilterListIcon className="h-5 w-5 text-gray-400" />
               <select
-                value={roleFilter}
+                value={statusFilter}
                 onChange={(e) => {
-                  setRoleFilter(e.target.value);
+                  setStatusFilter(e.target.value);
                   setCurrentPage(1);
                 }}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="">All Roles</option>
-                <option value="CUSTOMER">Customers</option>
-                <option value="ADMIN">Admins</option>
+                <option value="">All Customers</option>
+                <option value="active">Active Customers</option>
+                <option value="inactive">Inactive Customers</option>
               </select>
+            </div>
+            {/* Sort by Orders */}
+            <div className="flex items-center space-x-2">
+              <span className="text-xs text-gray-500">Sort by Orders:</span>
+              <button
+                className={`px-2 py-1 rounded ${
+                  sortByOrders === "asc"
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-gray-100 text-gray-700"
+                }`}
+                onClick={() =>
+                  setSortByOrders(sortByOrders === "asc" ? null : "asc")
+                }
+                title="Sort Ascending"
+              >
+                ↑
+              </button>
+              <button
+                className={`px-2 py-1 rounded ${
+                  sortByOrders === "desc"
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-gray-100 text-gray-700"
+                }`}
+                onClick={() =>
+                  setSortByOrders(sortByOrders === "desc" ? null : "desc")
+                }
+                title="Sort Descending"
+              >
+                ↓
+              </button>
             </div>
           </div>
         </div>
