@@ -674,20 +674,6 @@ const CustomerManagement = () => {
                 <TrendingUpIcon className="w-8 h-8 text-orange-600" />
               </div>
             </div>
-
-            <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-purple-600">
-                    Total Revenue
-                  </p>
-                  <p className="text-2xl font-bold text-purple-900">
-                    {formatCurrency(customerStats.totalRevenue)}
-                  </p>
-                </div>
-                <ShoppingCartIcon className="w-8 h-8 text-purple-600" />
-              </div>
-            </div>
           </div>
         </div>
 
