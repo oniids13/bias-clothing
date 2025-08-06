@@ -4,7 +4,12 @@ import {
   getAdminDashboardData,
   getDashboardAnalytics,
 } from "../model/adminQueries.js";
-import { getUserStats } from "../model/userQueries.js";
+import {
+  getUserStats,
+  getAllUsers,
+  deleteUser,
+  getUserById,
+} from "../model/userQueries.js";
 import {
   getProductStats,
   getAllProductsForAdmin,
@@ -300,6 +305,130 @@ const getInventoryAnalyticsController = async (req, res) => {
   }
 };
 
+// Customer Management Controllers
+
+// Get all customers controller
+const getAllCustomersController = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, role = "CUSTOMER", search } = req.query;
+
+    const options = {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      role,
+      search,
+    };
+
+    const result = await getAllUsers(options);
+
+    res.status(200).json({
+      success: true,
+      message: "Customers retrieved successfully",
+      data: result.users,
+      pagination: result.pagination,
+    });
+  } catch (error) {
+    console.error("Error fetching customers:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching customers",
+    });
+  }
+};
+
+// Get customer details controller
+const getCustomerDetailsController = async (req, res) => {
+  try {
+    const { customerId } = req.params;
+
+    const customer = await getUserById(customerId);
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Customer details retrieved successfully",
+      data: customer,
+    });
+  } catch (error) {
+    console.error("Error fetching customer details:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching customer details",
+    });
+  }
+};
+
+// Delete customer controller
+const deleteCustomerController = async (req, res) => {
+  try {
+    const { customerId } = req.params;
+
+    // Check if customer exists
+    const customer = await getUserById(customerId);
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer not found",
+      });
+    }
+
+    // Prevent deleting admin users
+    if (customer.role === "ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "Cannot delete admin users",
+      });
+    }
+
+    // Check if customer has orders
+    if (customer._count?.orders > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete customer with existing orders",
+      });
+    }
+
+    await deleteUser(customerId);
+
+    res.status(200).json({
+      success: true,
+      message: "Customer deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting customer:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error deleting customer",
+    });
+  }
+};
+
+// Get customer statistics controller
+const getCustomerStatsController = async (req, res) => {
+  try {
+    const stats = await getUserStats();
+
+    res.status(200).json({
+      success: true,
+      message: "Customer statistics retrieved successfully",
+      data: stats,
+    });
+  } catch (error) {
+    console.error("Error fetching customer statistics:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching customer statistics",
+    });
+  }
+};
+
 export {
   getCompleteAdminStatsController,
   getRecentActivityController,
@@ -309,4 +438,8 @@ export {
   getInventoryDataController,
   updateVariantStockController,
   getInventoryAnalyticsController,
+  getAllCustomersController,
+  getCustomerDetailsController,
+  deleteCustomerController,
+  getCustomerStatsController,
 };

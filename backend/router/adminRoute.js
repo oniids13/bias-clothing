@@ -25,6 +25,10 @@ import {
   getInventoryDataController,
   updateVariantStockController,
   getInventoryAnalyticsController,
+  getAllCustomersController,
+  getCustomerDetailsController,
+  deleteCustomerController,
+  getCustomerStatsController,
 } from "../controller/adminController.js";
 import {
   getAllOrdersController,
@@ -106,5 +110,11 @@ router.get("/orders", getAllOrdersController);
 router.put("/orders/:orderId/status", updateOrderStatusController);
 router.put("/orders/:orderId/payment-status", updatePaymentStatusController);
 router.get("/orders/:orderId/invoice", generateInvoiceController);
+
+// Customer Management Routes
+router.get("/customers/stats", getCustomerStatsController);
+router.get("/customers", getAllCustomersController);
+router.get("/customers/:customerId", getCustomerDetailsController);
+router.delete("/customers/:customerId", deleteCustomerController);
 
 export default router;

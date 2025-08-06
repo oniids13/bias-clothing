@@ -806,4 +806,145 @@ export const adminApi = {
       };
     }
   },
+
+  // Customer Management
+  getAllCustomers: async (options = {}) => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (options.page) queryParams.append("page", options.page);
+      if (options.limit) queryParams.append("limit", options.limit);
+      if (options.search) queryParams.append("search", options.search);
+
+      const response = await fetch(
+        `${API_BASE_URL}/admin/customers?${queryParams}`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch customers");
+      }
+
+      return {
+        success: true,
+        data: data.data,
+        pagination: data.pagination,
+      };
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+      return {
+        success: false,
+        message: error.message,
+        data: [],
+        pagination: null,
+      };
+    }
+  },
+
+  getCustomerDetails: async (customerId) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/admin/customers/${customerId}`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch customer details");
+      }
+
+      return {
+        success: true,
+        data: data.data,
+      };
+    } catch (error) {
+      console.error("Error fetching customer details:", error);
+      return {
+        success: false,
+        message: error.message,
+        data: null,
+      };
+    }
+  },
+
+  deleteCustomer: async (customerId) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/admin/customers/${customerId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to delete customer");
+      }
+
+      return {
+        success: true,
+        data: data.data,
+      };
+    } catch (error) {
+      console.error("Error deleting customer:", error);
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  },
+
+  getCustomerStats: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/customers/stats`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch customer stats");
+      }
+
+      return {
+        success: true,
+        data: data.data,
+      };
+    } catch (error) {
+      console.error("Error fetching customer stats:", error);
+      return {
+        success: false,
+        message: error.message,
+        data: {
+          totalCustomers: 0,
+          newCustomers: 0,
+          returningCustomers: 0,
+          totalRevenue: 0,
+        },
+      };
+    }
+  },
 };

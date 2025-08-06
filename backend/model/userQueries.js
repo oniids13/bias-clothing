@@ -405,6 +405,66 @@ const getUserStats = async (dateRange = {}) => {
   }
 };
 
+// Get user by ID with full details
+const getUserById = async (userId) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        addresses: {
+          orderBy: {
+            isDefault: "desc",
+          },
+        },
+        orders: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          include: {
+            items: {
+              include: {
+                product: {
+                  select: {
+                    id: true,
+                    name: true,
+                    imageUrl: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            orders: true,
+            addresses: true,
+          },
+        },
+      },
+    });
+
+    return user;
+  } catch (error) {
+    console.error("Error fetching user by ID:", error);
+    throw error;
+  }
+};
+
+// Delete user
+const deleteUser = async (userId) => {
+  try {
+    // Delete user (this will cascade to addresses due to foreign key constraints)
+    const deletedUser = await prisma.user.delete({
+      where: { id: userId },
+    });
+
+    return deletedUser;
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    throw error;
+  }
+};
+
 export {
   createUser,
   getUserLogin,
@@ -418,4 +478,6 @@ export {
   getUserCount,
   getAllUsers,
   getUserStats,
+  getUserById,
+  deleteUser,
 };

@@ -314,9 +314,7 @@ const Dashboard = () => {
         {/* Dashboard Header */}
         <DashboardHeader
           title="Analytics Dashboard"
-          subtitle={`View overall statistics and analytics - ${
-            user?.name || "Administrator"
-          }`}
+          subtitle={`View overall statistics and analytics`}
           user={user}
           onRefresh={fetchDashboardData}
         >
