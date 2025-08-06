@@ -38,3 +38,9 @@ html {
   height: 15%;
   cursor: pointer;
 }
+
+.btn-about-shop {
+  text-align: center;
+  border: 3px solid #fff;
+  cursor: pointer;
+}

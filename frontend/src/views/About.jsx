@@ -129,7 +129,7 @@ const About = () => {
           </p>
           <button
             onClick={handleShopNow}
-            className="bg-white text-black px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+            className="btn-about-shop bg-red-500 text-white hover:bg-red-400 hover:text-black h-15 w-40"
           >
             Shop Now
           </button>
