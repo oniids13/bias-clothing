@@ -71,10 +71,6 @@ const SalesAnalytics = () => {
     }
   }, [selectedPeriod]);
 
-  const handleBackToAdmin = () => {
-    navigate("/admin");
-  };
-
   const handlePeriodChange = (period) => {
     setSelectedPeriod(period);
   };
@@ -141,29 +137,31 @@ const SalesAnalytics = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header */}
-      <DashboardHeader
-        title="Sales Analytics"
-        subtitle={`${getPeriodLabel(selectedPeriod)} Sales Overview`}
-        onBack={handleBackToAdmin}
-        icon={<AssessmentIcon />}
-      />
-
-      {/* Success Message */}
-      {successMessage && (
-        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
-          {successMessage}
-        </div>
-      )}
-
-      {/* Error Message */}
-      {error && (
-        <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
-          {error}
-        </div>
-      )}
-
       <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <DashboardHeader
+          title="Sales Analytics"
+          subtitle={`${getPeriodLabel(selectedPeriod)} Sales Overview`}
+          user="Admin"
+          onRefresh={fetchSalesAnalytics}
+          onBack={() => navigate("/admin")}
+          showBack={true}
+        />
+
+        {/* Success Message */}
+        {successMessage && (
+          <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
+            {successMessage}
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
+            {error}
+          </div>
+        )}
+
         {/* Period Filter */}
         <div className="mb-8">
           <div className="flex items-center justify-between">

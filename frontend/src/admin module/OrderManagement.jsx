@@ -825,16 +825,9 @@ const OrderManagement = () => {
           subtitle="Manage customer orders and track order status"
           user={user}
           onRefresh={fetchOrders}
+          onBack={handleBackToAdmin}
+          showBack={true}
         >
-          {/* Back Button */}
-          <button
-            onClick={handleBackToAdmin}
-            className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
-          >
-            <ArrowBackIcon className="h-5 w-5" />
-            <span className="text-sm font-medium">Back to Admin</span>
-          </button>
-
           {/* Successful Orders Indicator */}
           <div className="flex items-center space-x-2 text-sm text-gray-600">
             <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">

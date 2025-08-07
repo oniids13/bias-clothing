@@ -614,18 +614,9 @@ const CustomerManagement = () => {
           subtitle="Manage customer accounts and view customer information"
           user={user}
           onRefresh={fetchCustomers}
-        >
-          {/* Action Buttons */}
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={handleBackToAdmin}
-              className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
-            >
-              <ArrowBackIcon className="h-5 w-5" />
-              <span className="text-sm font-medium">Back to Admin</span>
-            </button>
-          </div>
-        </DashboardHeader>
+          onBack={handleBackToAdmin}
+          showBack={true}
+        />
 
         {/* Statistics Cards */}
         <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
