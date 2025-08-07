@@ -9,6 +9,7 @@ const Register = () => {
     firstName: "",
     lastName: "",
     email: "",
+    contactNumber: "",
     password: "",
     confirmPassword: "",
   });
@@ -75,6 +76,14 @@ const Register = () => {
       newErrors.confirmPassword = "Passwords do not match";
     }
 
+    // Contact number validation
+    if (!formData.contactNumber.trim()) {
+      newErrors.contactNumber = "Contact number is required";
+    } else if (!/^\d{7,15}$/.test(formData.contactNumber.trim())) {
+      newErrors.contactNumber =
+        "Please enter a valid contact number (7-15 digits)";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -101,6 +110,7 @@ const Register = () => {
           firstName: formData.firstName,
           lastName: formData.lastName,
           email: formData.email,
+          phone: formData.contactNumber,
           password: formData.password,
         }),
       });
@@ -283,6 +293,33 @@ const Register = () => {
                     </p>
                   )}
                 </div>
+              </div>
+              {/* Contact Number Field */}
+              <div>
+                <label
+                  htmlFor="contactNumber"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Contact Number
+                </label>
+                <input
+                  id="contactNumber"
+                  name="contactNumber"
+                  type="tel"
+                  autoComplete="tel"
+                  required
+                  value={formData.contactNumber}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 text-gray-900 placeholder-gray-500 ${
+                    errors.contactNumber ? "border-red-300" : "border-gray-300"
+                  }`}
+                  placeholder="Enter your contact number"
+                />
+                {errors.contactNumber && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.contactNumber}
+                  </p>
+                )}
               </div>
 
               {/* Email Field */}

@@ -355,7 +355,14 @@ const Checkout = () => {
       }
     } catch (error) {
       console.error("Error processing order:", error);
-      setError("Failed to process order. Please try again.");
+      // Show the real error message if available
+      if (error && error.message) {
+        setError(error.message);
+      } else if (typeof error === "string") {
+        setError(error);
+      } else {
+        setError("Failed to process order. Please try again.");
+      }
     } finally {
       setProcessing(false);
     }

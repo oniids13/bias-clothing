@@ -67,13 +67,13 @@ const registerUser = [
     }
 
     try {
-      const { firstName, lastName, email, password } = req.body;
+      const { firstName, lastName, email, password, phone } = req.body;
       const fullName = `${firstName} ${lastName}`;
       const saltHash = genPassword(password);
       const salt = saltHash.salt;
       const hash = saltHash.hash;
 
-      const user = await createUser(fullName, email, salt, hash);
+      const user = await createUser(fullName, email, salt, hash, null, phone);
 
       // Log the user into the session using Passport (same as login)
       req.logIn(user, (err) => {

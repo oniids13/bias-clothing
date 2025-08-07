@@ -4,7 +4,14 @@ import { validPassword } from "../utils/passwordUtil.js";
 
 const prisma = new PrismaClient();
 
-const createUser = async (name, email, salt, hash, googleId = null) => {
+const createUser = async (
+  name,
+  email,
+  salt,
+  hash,
+  googleId = null,
+  phone = null
+) => {
   try {
     // Check if user already exists with this email
     const existingUser = await prisma.user.findUnique({
@@ -33,6 +40,7 @@ const createUser = async (name, email, salt, hash, googleId = null) => {
         salt,
         hash,
         googleId, // Will be null for local registration, or the Google ID for OAuth
+        phone,
         role: "CUSTOMER", // Default role for locally registered users
       },
     });
