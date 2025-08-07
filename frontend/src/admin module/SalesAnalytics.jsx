@@ -164,19 +164,19 @@ const SalesAnalytics = () => {
 
         {/* Period Filter */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <FilterListIcon className="text-gray-600" />
-              <span className="text-lg font-semibold text-gray-700">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <FilterListIcon className="text-gray-600 h-5 w-5 sm:h-6 sm:w-6" />
+              <span className="text-base sm:text-lg font-semibold text-gray-700">
                 Time Period
               </span>
             </div>
-            <div className="flex space-x-2">
+            <div className="flex flex-wrap gap-2 sm:space-x-2">
               {["daily", "weekly", "monthly", "yearly"].map((period) => (
                 <button
                   key={period}
                   onClick={() => handlePeriodChange(period)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  className={`px-3 py-2 sm:px-4 rounded-lg text-sm sm:text-base font-medium transition-colors ${
                     selectedPeriod === period
                       ? "bg-red-500 text-white"
                       : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200"
@@ -190,25 +190,25 @@ const SalesAnalytics = () => {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
           {/* Total Revenue */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium text-gray-600">
                   Total Revenue
                 </p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">
                   {formatCurrency(analyticsData.totalRevenue)}
                 </p>
                 <div className="flex items-center mt-2">
                   {getRevenueChange() >= 0 ? (
-                    <TrendingUpIcon className="text-green-500 text-sm" />
+                    <TrendingUpIcon className="text-green-500 text-xs sm:text-sm" />
                   ) : (
-                    <TrendingDownIcon className="text-red-500 text-sm" />
+                    <TrendingDownIcon className="text-red-500 text-xs sm:text-sm" />
                   )}
                   <span
-                    className={`text-sm font-medium ml-1 ${
+                    className={`text-xs sm:text-sm font-medium ml-1 ${
                       getRevenueChange() >= 0
                         ? "text-green-500"
                         : "text-red-500"
@@ -218,30 +218,30 @@ const SalesAnalytics = () => {
                   </span>
                 </div>
               </div>
-              <div className="bg-red-100 p-3 rounded-full">
-                <AttachMoneyIcon className="text-red-500 text-2xl" />
+              <div className="bg-red-100 p-2 sm:p-3 rounded-full ml-3">
+                <AttachMoneyIcon className="text-red-500 text-lg sm:text-xl lg:text-2xl" />
               </div>
             </div>
           </div>
 
           {/* Total Orders */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium text-gray-600">
                   Total Orders
                 </p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
                   {analyticsData.totalOrders}
                 </p>
                 <div className="flex items-center mt-2">
                   {getOrdersChange() >= 0 ? (
-                    <TrendingUpIcon className="text-green-500 text-sm" />
+                    <TrendingUpIcon className="text-green-500 text-xs sm:text-sm" />
                   ) : (
-                    <TrendingDownIcon className="text-red-500 text-sm" />
+                    <TrendingDownIcon className="text-red-500 text-xs sm:text-sm" />
                   )}
                   <span
-                    className={`text-sm font-medium ml-1 ${
+                    className={`text-xs sm:text-sm font-medium ml-1 ${
                       getOrdersChange() >= 0 ? "text-green-500" : "text-red-500"
                     }`}
                   >
@@ -249,44 +249,48 @@ const SalesAnalytics = () => {
                   </span>
                 </div>
               </div>
-              <div className="bg-blue-100 p-3 rounded-full">
-                <ShoppingCartIcon className="text-blue-500 text-2xl" />
+              <div className="bg-blue-100 p-2 sm:p-3 rounded-full ml-3">
+                <ShoppingCartIcon className="text-blue-500 text-lg sm:text-xl lg:text-2xl" />
               </div>
             </div>
           </div>
 
           {/* Average Order Value */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium text-gray-600">
                   Average Order Value
                 </p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">
                   {formatCurrency(analyticsData.averageOrderValue)}
                 </p>
-                <p className="text-sm text-gray-500 mt-2">Per order</p>
+                <p className="text-xs sm:text-sm text-gray-500 mt-2">
+                  Per order
+                </p>
               </div>
-              <div className="bg-green-100 p-3 rounded-full">
-                <AssessmentIcon className="text-green-500 text-2xl" />
+              <div className="bg-green-100 p-2 sm:p-3 rounded-full ml-3">
+                <AssessmentIcon className="text-green-500 text-lg sm:text-xl lg:text-2xl" />
               </div>
             </div>
           </div>
 
           {/* Period Info */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Period</p>
-                <p className="text-2xl font-bold text-gray-900">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium text-gray-600">
+                  Period
+                </p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
                   {getPeriodLabel(selectedPeriod)}
                 </p>
-                <p className="text-sm text-gray-500 mt-2">
+                <p className="text-xs sm:text-sm text-gray-500 mt-2">
                   {analyticsData.dailySales.length} data points
                 </p>
               </div>
-              <div className="bg-purple-100 p-3 rounded-full">
-                <CalendarTodayIcon className="text-purple-500 text-2xl" />
+              <div className="bg-purple-100 p-2 sm:p-3 rounded-full ml-3">
+                <CalendarTodayIcon className="text-purple-500 text-lg sm:text-xl lg:text-2xl" />
               </div>
             </div>
           </div>
