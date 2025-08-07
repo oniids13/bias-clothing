@@ -19,6 +19,7 @@ const Login = () => {
   const [forgotSuccess, setForgotSuccess] = useState("");
   const [forgotShowPassword, setForgotShowPassword] = useState(false);
   const [forgotShowConfirm, setForgotShowConfirm] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   const navigate = useNavigate();
   const { setUser } = useAuth();
 
@@ -108,6 +109,23 @@ const Login = () => {
         setForgotEmail("");
         setForgotPassword("");
         setForgotConfirm("");
+
+        // Start countdown from 3 seconds
+        setCountdown(3);
+
+        // Auto-close modal after 3 seconds with countdown
+        const countdownInterval = setInterval(() => {
+          setCountdown((prev) => {
+            if (prev <= 1) {
+              clearInterval(countdownInterval);
+              setShowForgotModal(false);
+              setForgotSuccess("");
+              setForgotError("");
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
       } else {
         setForgotError(data.message || "Failed to reset password.");
       }
@@ -316,7 +334,8 @@ const Login = () => {
             )}
             {forgotSuccess && (
               <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm mb-2">
-                {forgotSuccess}
+                {forgotSuccess}{" "}
+                {countdown > 0 && `(Closing in ${countdown} seconds)`}
               </div>
             )}
             <form className="space-y-4" onSubmit={handleForgotPassword}>
