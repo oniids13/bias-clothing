@@ -29,6 +29,7 @@ import {
   getCustomerDetailsController,
   deleteCustomerController,
   getCustomerStatsController,
+  getSalesAnalyticsController,
 } from "../controller/adminController.js";
 import {
   getAllOrdersController,
@@ -116,5 +117,8 @@ router.get("/customers/stats", getCustomerStatsController);
 router.get("/customers", getAllCustomersController);
 router.get("/customers/:customerId", getCustomerDetailsController);
 router.delete("/customers/:customerId", deleteCustomerController);
+
+// Sales Analytics Routes
+router.get("/sales/analytics", getSalesAnalyticsController);
 
 export default router;

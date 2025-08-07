@@ -799,9 +799,52 @@ export const adminApi = {
         success: false,
         message: error.message,
         data: {
-          stockTrends: [],
-          categoryDistribution: [],
-          lowStockAlerts: [],
+          lowStockProducts: [],
+          outOfStockProducts: [],
+          stockDistribution: [],
+          categoryStockLevels: [],
+        },
+      };
+    }
+  },
+
+  // Get sales analytics
+  getSalesAnalytics: async (period = "monthly") => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/admin/sales/analytics?period=${period}`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch sales analytics");
+      }
+
+      return {
+        success: true,
+        data: data.data,
+      };
+    } catch (error) {
+      console.error("Error fetching sales analytics:", error);
+      return {
+        success: false,
+        message: error.message,
+        data: {
+          period,
+          totalRevenue: 0,
+          totalOrders: 0,
+          averageOrderValue: 0,
+          dailySales: [],
+          topProducts: [],
+          topCategories: [],
         },
       };
     }

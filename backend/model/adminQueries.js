@@ -407,6 +407,150 @@ const getSalesByCategoryData = async () => {
   }
 };
 
+// Get sales analytics for different time periods
+const getSalesAnalytics = async (period = "monthly") => {
+  try {
+    const now = new Date();
+    let startDate;
+
+    switch (period) {
+      case "daily":
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case "weekly":
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case "monthly":
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case "yearly":
+        startDate = new Date(now.getFullYear(), 0, 1);
+        break;
+      default:
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+
+    // Get orders within the period
+    const orders = await prisma.order.findMany({
+      where: {
+        createdAt: {
+          gte: startDate,
+          lte: now,
+        },
+        status: {
+          in: ["CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED"],
+        },
+        paymentStatus: "PAID",
+      },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: {
+                name: true,
+                category: true,
+                price: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Calculate analytics
+    const totalRevenue = orders.reduce((sum, order) => {
+      return (
+        sum +
+        order.items.reduce((orderSum, item) => {
+          return orderSum + item.product.price * item.quantity;
+        }, 0)
+      );
+    }, 0);
+
+    const totalOrders = orders.length;
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    // Group by date for trend
+    const dailySales = {};
+    orders.forEach((order) => {
+      const dateKey = order.createdAt.toISOString().split("T")[0];
+      if (!dailySales[dateKey]) {
+        dailySales[dateKey] = { revenue: 0, orders: 0 };
+      }
+      const orderRevenue = order.items.reduce((sum, item) => {
+        return sum + item.product.price * item.quantity;
+      }, 0);
+      dailySales[dateKey].revenue += orderRevenue;
+      dailySales[dateKey].orders += 1;
+    });
+
+    // Get top selling products
+    const productSales = {};
+    orders.forEach((order) => {
+      order.items.forEach((item) => {
+        const productName = item.product.name;
+        if (!productSales[productName]) {
+          productSales[productName] = {
+            quantity: 0,
+            revenue: 0,
+            category: item.product.category,
+          };
+        }
+        productSales[productName].quantity += item.quantity;
+        productSales[productName].revenue += item.product.price * item.quantity;
+      });
+    });
+
+    const topProducts = Object.entries(productSales)
+      .map(([name, data]) => ({
+        name,
+        quantity: data.quantity,
+        revenue: data.revenue,
+        category: data.category,
+      }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10);
+
+    // Get sales by category
+    const categorySales = {};
+    orders.forEach((order) => {
+      order.items.forEach((item) => {
+        const category = item.product.category;
+        if (!categorySales[category]) {
+          categorySales[category] = { quantity: 0, revenue: 0 };
+        }
+        categorySales[category].quantity += item.quantity;
+        categorySales[category].revenue += item.product.price * item.quantity;
+      });
+    });
+
+    const topCategories = Object.entries(categorySales)
+      .map(([category, data]) => ({
+        category,
+        quantity: data.quantity,
+        revenue: data.revenue,
+      }))
+      .sort((a, b) => b.revenue - a.revenue);
+
+    return {
+      period,
+      totalRevenue,
+      totalOrders,
+      averageOrderValue,
+      dailySales: Object.entries(dailySales).map(([date, data]) => ({
+        date,
+        revenue: data.revenue,
+        orders: data.orders,
+      })),
+      topProducts,
+      topCategories,
+    };
+  } catch (error) {
+    console.error("Error fetching sales analytics:", error);
+    throw error;
+  }
+};
+
 // Get all dashboard analytics data
 const getDashboardAnalytics = async () => {
   try {
@@ -439,4 +583,5 @@ export {
   getUserGrowthData,
   getSalesByCategoryData,
   getDashboardAnalytics,
+  getSalesAnalytics,
 };

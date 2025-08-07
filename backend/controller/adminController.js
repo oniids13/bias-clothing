@@ -3,6 +3,7 @@ import {
   getRecentActivity,
   getAdminDashboardData,
   getDashboardAnalytics,
+  getSalesAnalytics,
 } from "../model/adminQueries.js";
 import {
   getUserStats,
@@ -429,6 +430,27 @@ const getCustomerStatsController = async (req, res) => {
   }
 };
 
+// Get sales analytics controller
+const getSalesAnalyticsController = async (req, res) => {
+  try {
+    const { period = "monthly" } = req.query;
+
+    const analyticsData = await getSalesAnalytics(period);
+
+    res.status(200).json({
+      success: true,
+      message: "Sales analytics retrieved successfully",
+      data: analyticsData,
+    });
+  } catch (error) {
+    console.error("Error fetching sales analytics:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error fetching sales analytics",
+    });
+  }
+};
+
 export {
   getCompleteAdminStatsController,
   getRecentActivityController,
@@ -442,4 +464,5 @@ export {
   getCustomerDetailsController,
   deleteCustomerController,
   getCustomerStatsController,
+  getSalesAnalyticsController,
 };
