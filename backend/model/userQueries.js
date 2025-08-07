@@ -468,7 +468,14 @@ const checkUserExists = async (email) => {
   try {
     const user = await prisma.user.findUnique({
       where: { email },
-      select: { id: true, email: true, name: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        googleId: true,
+        hash: true,
+        salt: true,
+      },
     });
     return user;
   } catch (error) {

@@ -20,6 +20,7 @@ const Login = () => {
   const [forgotShowPassword, setForgotShowPassword] = useState(false);
   const [forgotShowConfirm, setForgotShowConfirm] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [isGoogleAccount, setIsGoogleAccount] = useState(false);
   const navigate = useNavigate();
   const { setUser } = useAuth();
 
@@ -126,8 +127,17 @@ const Login = () => {
             return prev - 1;
           });
         }, 1000);
+      } else if (data.isGoogleAccount) {
+        setForgotError(
+          "This email is linked to a Google account. Please use Google Sign-In to access your account."
+        );
+        setIsGoogleAccount(true);
+        setForgotEmail("");
+        setForgotPassword("");
+        setForgotConfirm("");
       } else {
         setForgotError(data.message || "Failed to reset password.");
+        setIsGoogleAccount(false);
       }
     } catch (error) {
       console.error("Forgot password error:", error);
@@ -316,6 +326,7 @@ const Login = () => {
                 setShowForgotModal(false);
                 setForgotError("");
                 setForgotSuccess("");
+                setIsGoogleAccount(false);
               }}
               aria-label="Close"
             >
@@ -426,6 +437,28 @@ const Login = () => {
               >
                 {forgotLoading ? "Resetting..." : "Reset Password"}
               </button>
+
+              {/* Google Sign-In Button for Google Accounts */}
+              {isGoogleAccount && (
+                <div className="mt-4">
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300" />
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white text-gray-500">Or</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    className="w-full flex justify-center items-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-200 mt-4"
+                  >
+                    <FcGoogle className="h-5 w-5 mr-3" />
+                    Sign in with Google
+                  </button>
+                </div>
+              )}
             </form>
           </div>
         </div>

@@ -436,6 +436,16 @@ const forgotPasswordController = [
         });
       }
 
+      // Check if user is a Google account (has googleId but no hash/salt)
+      if (user.googleId && (!user.hash || !user.salt)) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "This email is linked to a Google account. Please use Google Sign-In to access your account.",
+          isGoogleAccount: true,
+        });
+      }
+
       // Generate new salt and hash for the password
       const saltHash = genPassword(password);
       const salt = saltHash.salt;
