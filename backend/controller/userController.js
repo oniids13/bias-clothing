@@ -11,6 +11,8 @@ import {
   getUserCount,
   getAllUsers,
   getUserStats,
+  checkUserExists,
+  updateUserPassword,
 } from "../model/userQueries.js";
 import { body, validationResult } from "express-validator";
 import { genPassword } from "../utils/passwordUtil.js";
@@ -37,6 +39,18 @@ const validateUser = [
     .trim()
     .isLength({ min: 6, max: 20 })
     .withMessage(`Password ${passLength}`),
+];
+
+// Validation for forgot password
+const validateForgotPassword = [
+  body("email")
+    .trim()
+    .isEmail()
+    .withMessage("Please enter a valid email address"),
+  body("password")
+    .trim()
+    .isLength({ min: 6, max: 20 })
+    .withMessage("Password must be between 6 and 20 characters"),
 ];
 
 const registerUser = [
@@ -397,6 +411,59 @@ const getUserStatsController = async (req, res) => {
   }
 };
 
+const forgotPasswordController = [
+  validateForgotPassword,
+  async (req, res) => {
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors: errors.array(),
+      });
+    }
+
+    try {
+      const { email, password } = req.body;
+
+      // Check if user exists
+      const user = await checkUserExists(email);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "No account found with this email address",
+        });
+      }
+
+      // Generate new salt and hash for the password
+      const saltHash = genPassword(password);
+      const salt = saltHash.salt;
+      const hash = saltHash.hash;
+
+      // Update user's password
+      const updatedUser = await updateUserPassword(email, salt, hash);
+
+      res.status(200).json({
+        success: true,
+        message: "Password reset successfully",
+        user: {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          name: updatedUser.name,
+        },
+      });
+    } catch (error) {
+      console.error("Error in forgot password:", error);
+      res.status(500).json({
+        success: false,
+        message: "An error occurred while resetting password",
+        error: error.message,
+      });
+    }
+  },
+];
+
 export {
   registerUser,
   loginUser,
@@ -410,4 +477,5 @@ export {
   getUserCountController,
   getAllUsersController,
   getUserStatsController,
+  forgotPasswordController,
 };

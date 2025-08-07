@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import { useAuth } from "../App";
@@ -10,11 +10,19 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotPassword, setForgotPassword] = useState("");
+  const [forgotConfirm, setForgotConfirm] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState("");
+  const [forgotSuccess, setForgotSuccess] = useState("");
+  const [forgotShowPassword, setForgotShowPassword] = useState(false);
+  const [forgotShowConfirm, setForgotShowConfirm] = useState(false);
   const navigate = useNavigate();
   const { setUser } = useAuth();
 
   const handleGoogleLogin = () => {
-    // Redirect to Google OAuth endpoint
     window.location.href = "http://localhost:3000/auth/google";
   };
 
@@ -22,31 +30,22 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     setError("");
-
     try {
       const response = await fetch("http://localhost:3000/api/user/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ email, password }),
       });
-
       const data = await response.json();
-
       if (response.ok && data.success) {
-        // Login successful - update global user state
         setUser(data.user);
-
-        // Check if user is admin and redirect accordingly
         if (data.user.role === "ADMIN") {
           navigate("/admin");
         } else {
           navigate("/");
         }
       } else {
-        // Login failed - show error message
         setError(data.message || "Login failed. Please try again.");
       }
     } catch (error) {
@@ -54,6 +53,69 @@ const Login = () => {
       setError("An error occurred. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setForgotLoading(true);
+    setForgotError("");
+    setForgotSuccess("");
+
+    // Frontend validation
+    if (!forgotEmail || !forgotPassword || !forgotConfirm) {
+      setForgotError("All fields are required.");
+      setForgotLoading(false);
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(forgotEmail)) {
+      setForgotError("Please enter a valid email address.");
+      setForgotLoading(false);
+      return;
+    }
+
+    // Password validation
+    if (forgotPassword.length < 6 || forgotPassword.length > 20) {
+      setForgotError("Password must be between 6 and 20 characters.");
+      setForgotLoading(false);
+      return;
+    }
+
+    if (forgotPassword !== forgotConfirm) {
+      setForgotError("Passwords do not match.");
+      setForgotLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        "http://localhost:3000/api/user/forgot-password",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: forgotEmail,
+            password: forgotPassword,
+          }),
+        }
+      );
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setForgotSuccess("Password reset successful. You can now log in.");
+        setForgotEmail("");
+        setForgotPassword("");
+        setForgotConfirm("");
+      } else {
+        setForgotError(data.message || "Failed to reset password.");
+      }
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      setForgotError("An error occurred. Please try again.");
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -104,7 +166,6 @@ const Login = () => {
                   placeholder="Enter your email"
                 />
               </div>
-
               {/* Password Field */}
               <div>
                 <label
@@ -139,17 +200,16 @@ const Login = () => {
                 </div>
               </div>
             </div>
-
-            {/* Forgot Password Link */}
+            {/* Forgot Password Button */}
             <div className="flex items-center justify-end">
-              <Link
-                to="/forgot-password"
+              <button
+                type="button"
                 className="text-sm text-blue-600 hover:text-blue-500 transition duration-200"
+                onClick={() => setShowForgotModal(true)}
               >
                 Forgot your password?
-              </Link>
+              </button>
             </div>
-
             {/* Sign In Button */}
             <button
               type="submit"
@@ -184,7 +244,6 @@ const Login = () => {
                 "Sign In"
               )}
             </button>
-
             {/* Divider */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -196,7 +255,6 @@ const Login = () => {
                 </span>
               </div>
             </div>
-
             {/* Google Sign In Button */}
             <button
               type="button"
@@ -207,31 +265,152 @@ const Login = () => {
               Sign in with Google
             </button>
           </form>
-
           {/* Sign Up Link */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{" "}
-              <Link
-                to="/register"
+              <a
+                href="/register"
                 className="font-medium text-blue-600 hover:text-blue-500 transition duration-200"
               >
                 Sign up here
-              </Link>
+              </a>
             </p>
           </div>
         </div>
-
         {/* Back to Home Link */}
         <div className="text-center">
-          <Link
-            to="/"
+          <a
+            href="/"
             className="text-sm text-gray-500 hover:text-gray-700 transition duration-200"
           >
             ← Back to Home
-          </Link>
+          </a>
         </div>
       </div>
+      {/* Forgot Password Modal */}
+      {showForgotModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md relative">
+            <button
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+              onClick={() => {
+                setShowForgotModal(false);
+                setForgotError("");
+                setForgotSuccess("");
+              }}
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">
+              Reset Password
+            </h2>
+            <p className="text-gray-600 mb-4 text-center">
+              Enter your email and new password.
+            </p>
+            {forgotError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-2">
+                {forgotError}
+              </div>
+            )}
+            {forgotSuccess && (
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm mb-2">
+                {forgotSuccess}
+              </div>
+            )}
+            <form className="space-y-4" onSubmit={handleForgotPassword}>
+              <div>
+                <label
+                  htmlFor="forgot-email"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Email Address
+                </label>
+                <input
+                  id="forgot-email"
+                  name="forgot-email"
+                  type="email"
+                  required
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 text-gray-900 placeholder-gray-500"
+                  placeholder="Enter your email"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="forgot-password"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  New Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="forgot-password"
+                    name="forgot-password"
+                    type={forgotShowPassword ? "text" : "password"}
+                    required
+                    value={forgotPassword}
+                    onChange={(e) => setForgotPassword(e.target.value)}
+                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 text-gray-900 placeholder-gray-500"
+                    placeholder="Enter new password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setForgotShowPassword(!forgotShowPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  >
+                    {forgotShowPassword ? (
+                      <AiOutlineEyeInvisible className="h-5 w-5" />
+                    ) : (
+                      <AiOutlineEye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label
+                  htmlFor="forgot-confirm"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="forgot-confirm"
+                    name="forgot-confirm"
+                    type={forgotShowConfirm ? "text" : "password"}
+                    required
+                    value={forgotConfirm}
+                    onChange={(e) => setForgotConfirm(e.target.value)}
+                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 text-gray-900 placeholder-gray-500"
+                    placeholder="Confirm new password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setForgotShowConfirm(!forgotShowConfirm)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  >
+                    {forgotShowConfirm ? (
+                      <AiOutlineEyeInvisible className="h-5 w-5" />
+                    ) : (
+                      <AiOutlineEye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={forgotLoading}
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200"
+              >
+                {forgotLoading ? "Resetting..." : "Reset Password"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -8,6 +8,7 @@ import {
   updateAddressController,
   deleteAddressController,
   setDefaultAddressController,
+  forgotPasswordController,
 } from "../controller/userController.js";
 import { checkAuth } from "../middleware/auth.js";
 
@@ -15,6 +16,7 @@ const userRouter = Router();
 
 userRouter.post("/register", registerUser);
 userRouter.post("/login", loginUser);
+userRouter.post("/forgot-password", forgotPasswordController);
 
 // Protected routes - require authentication
 userRouter.get("/profile", checkAuth, getUserProfile);

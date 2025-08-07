@@ -453,14 +453,48 @@ const getUserById = async (userId) => {
 // Delete user
 const deleteUser = async (userId) => {
   try {
-    // Delete user (this will cascade to addresses due to foreign key constraints)
-    const deletedUser = await prisma.user.delete({
+    const user = await prisma.user.delete({
       where: { id: userId },
     });
-
-    return deletedUser;
+    return user;
   } catch (error) {
     console.error("Error deleting user:", error);
+    throw error;
+  }
+};
+
+// Forgot password functionality
+const checkUserExists = async (email) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, name: true },
+    });
+    return user;
+  } catch (error) {
+    console.error("Error checking if user exists:", error);
+    throw error;
+  }
+};
+
+const updateUserPassword = async (email, salt, hash) => {
+  try {
+    const user = await prisma.user.update({
+      where: { email },
+      data: {
+        salt,
+        hash,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+      },
+    });
+    return user;
+  } catch (error) {
+    console.error("Error updating user password:", error);
     throw error;
   }
 };
@@ -474,10 +508,11 @@ export {
   updateAddress,
   deleteAddress,
   setDefaultAddress,
-  // Admin functions
   getUserCount,
   getAllUsers,
   getUserStats,
   getUserById,
   deleteUser,
+  checkUserExists,
+  updateUserPassword,
 };
