@@ -64,6 +64,23 @@ const Checkout = () => {
       setProcessing(true);
       setPaymentSuccessful(true);
 
+      // Get orderId from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const orderId = urlParams.get("order_id");
+      if (orderId) {
+        try {
+          // Update payment status to PAID
+          await fetch(`http://localhost:3000/api/order/${orderId}/payment`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ paymentStatus: "PAID" }),
+          });
+        } catch (err) {
+          console.error("Failed to update payment status:", err);
+        }
+      }
+
       // Clear the cart
       await cartApi.clearCart();
 
