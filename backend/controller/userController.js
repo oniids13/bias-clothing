@@ -93,6 +93,7 @@ const registerUser = [
             id: user.id,
             name: user.name,
             email: user.email,
+            phone: user.phone,
             role: user.role,
           },
         });
@@ -147,6 +148,7 @@ const loginUser = async (req, res) => {
             id: result.user.id,
             name: result.user.name,
             email: result.user.email,
+            phone: result.user.phone,
             role: result.user.role,
             avatar: result.user.avatar,
           },

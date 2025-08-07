@@ -205,6 +205,14 @@ const Checkout = () => {
     setProcessing(true);
     setError("");
 
+    // Defensive check for user and user.id
+    console.log("Checkout user object:", user);
+    if (!user || !user.id) {
+      setError("User information is missing. Please log out and log in again.");
+      setProcessing(false);
+      return;
+    }
+
     try {
       // Validate form
       if (
