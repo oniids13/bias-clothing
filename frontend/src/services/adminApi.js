@@ -845,6 +845,8 @@ export const adminApi = {
           dailySales: [],
           topProducts: [],
           topCategories: [],
+          topCustomers: [],
+          topLocations: [],
         },
       };
     }

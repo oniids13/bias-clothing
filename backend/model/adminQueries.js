@@ -437,10 +437,14 @@ const getSalesAnalytics = async (period = "monthly") => {
           gte: startDate,
           lte: now,
         },
+        // Include more statuses to get more data
         status: {
-          in: ["CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED"],
+          in: ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED"],
         },
-        paymentStatus: "PAID",
+        // Include more payment statuses
+        paymentStatus: {
+          in: ["PENDING", "PAID"],
+        },
       },
       include: {
         items: {
@@ -452,6 +456,19 @@ const getSalesAnalytics = async (period = "monthly") => {
                 price: true,
               },
             },
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        address: {
+          select: {
+            city: true,
+            state: true,
           },
         },
       },
@@ -532,6 +549,73 @@ const getSalesAnalytics = async (period = "monthly") => {
       }))
       .sort((a, b) => b.revenue - a.revenue);
 
+    // Get top customers
+    const customerSales = {};
+    orders.forEach((order) => {
+      const customerId = order.user.id;
+      const customerName = order.user.name || order.user.email;
+
+      if (!customerSales[customerId]) {
+        customerSales[customerId] = {
+          name: customerName,
+          email: order.user.email,
+          totalSpent: 0,
+          orderCount: 0,
+          averageOrderValue: 0,
+        };
+      }
+
+      const orderTotal = order.items.reduce((sum, item) => {
+        return sum + item.product.price * item.quantity;
+      }, 0);
+
+      customerSales[customerId].totalSpent += orderTotal;
+      customerSales[customerId].orderCount += 1;
+    });
+
+    // Calculate average order value for each customer
+    Object.values(customerSales).forEach((customer) => {
+      customer.averageOrderValue = customer.totalSpent / customer.orderCount;
+    });
+
+    const topCustomers = Object.values(customerSales)
+      .sort((a, b) => b.totalSpent - a.totalSpent)
+      .slice(0, 10);
+
+    // Get sales by location (city)
+    const locationSales = {};
+    orders.forEach((order) => {
+      const city = order.address?.city || "Unknown";
+      const state = order.address?.state || "";
+      const location = `${city}, ${state}`.trim();
+
+      if (!locationSales[location]) {
+        locationSales[location] = {
+          city: city,
+          state: state,
+          totalRevenue: 0,
+          orderCount: 0,
+          averageOrderValue: 0,
+        };
+      }
+
+      const orderTotal = order.items.reduce((sum, item) => {
+        return sum + item.product.price * item.quantity;
+      }, 0);
+
+      locationSales[location].totalRevenue += orderTotal;
+      locationSales[location].orderCount += 1;
+    });
+
+    // Calculate average order value for each location
+    Object.values(locationSales).forEach((location) => {
+      location.averageOrderValue = location.totalRevenue / location.orderCount;
+    });
+
+    const topLocations = Object.values(locationSales)
+      .sort((a, b) => b.totalRevenue - a.totalRevenue)
+      .slice(0, 10);
+
     return {
       period,
       totalRevenue,
@@ -544,6 +628,8 @@ const getSalesAnalytics = async (period = "monthly") => {
       })),
       topProducts,
       topCategories,
+      topCustomers,
+      topLocations,
     };
   } catch (error) {
     console.error("Error fetching sales analytics:", error);
