@@ -809,10 +809,14 @@ export const adminApi = {
   },
 
   // Get sales analytics
-  getSalesAnalytics: async (period = "monthly") => {
+  getSalesAnalytics: async (period = "monthly", { month, year } = {}) => {
     try {
+      const params = new URLSearchParams({ period });
+      if (month) params.append("month", String(month));
+      if (year) params.append("year", String(year));
+
       const response = await fetch(
-        `${API_BASE_URL}/admin/sales/analytics?period=${period}`,
+        `${API_BASE_URL}/admin/sales/analytics?${params.toString()}`,
         {
           method: "GET",
           credentials: "include",

@@ -33,13 +33,15 @@ const SalesAnalytics = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedPeriod, setSelectedPeriod] = useState("monthly");
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   // Success/notification states
   const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     fetchSalesAnalytics();
-  }, [selectedPeriod]);
+  }, [selectedPeriod, selectedMonth, selectedYear]);
 
   // Auto-hide success message
   useEffect(() => {
@@ -56,7 +58,10 @@ const SalesAnalytics = () => {
       setLoading(true);
       setError(null);
 
-      const response = await adminApi.getSalesAnalytics(selectedPeriod);
+      const response = await adminApi.getSalesAnalytics(selectedPeriod, {
+        month: selectedPeriod === "monthly" ? selectedMonth : undefined,
+        year: selectedYear,
+      });
 
       if (response.success) {
         setAnalyticsData(response.data);
@@ -69,10 +74,16 @@ const SalesAnalytics = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedPeriod]);
+  }, [selectedPeriod, selectedMonth, selectedYear]);
 
   const handlePeriodChange = (period) => {
     setSelectedPeriod(period);
+    if (period === "monthly") {
+      setSelectedMonth(new Date().getMonth() + 1);
+      setSelectedYear(new Date().getFullYear());
+    } else if (period === "yearly") {
+      setSelectedYear(new Date().getFullYear());
+    }
   };
 
   const formatCurrency = (amount) => {
@@ -97,11 +108,17 @@ const SalesAnalytics = () => {
       case "weekly":
         return "This Week";
       case "monthly":
-        return "This Month";
+        return new Date(selectedYear, selectedMonth - 1, 1).toLocaleString(
+          "en-US",
+          { month: "long", year: "numeric" }
+        );
       case "yearly":
-        return "This Year";
+        return String(selectedYear);
       default:
-        return "This Month";
+        return new Date().toLocaleString("en-US", {
+          month: "long",
+          year: "numeric",
+        });
     }
   };
 
@@ -162,7 +179,7 @@ const SalesAnalytics = () => {
           </div>
         )}
 
-        {/* Period Filter */}
+        {/* Period & Date Filters */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center space-x-2 sm:space-x-4">
@@ -186,6 +203,44 @@ const SalesAnalytics = () => {
                 </button>
               ))}
             </div>
+          </div>
+          {/* Month/Year selectors */}
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            {selectedPeriod === "monthly" && (
+              <>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                  className="px-3 py-2 border rounded-lg bg-white"
+                >
+                  {[...Array(12)].map((_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      {new Date(0, i).toLocaleString("en-US", {
+                        month: "long",
+                      })}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value))}
+                  className="px-3 py-2 border rounded-lg w-28"
+                  min="2000"
+                  max="2100"
+                />
+              </>
+            )}
+            {selectedPeriod === "yearly" && (
+              <input
+                type="number"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="px-3 py-2 border rounded-lg w-28"
+                min="2000"
+                max="2100"
+              />
+            )}
           </div>
         </div>
 

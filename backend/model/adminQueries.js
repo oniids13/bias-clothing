@@ -408,26 +408,44 @@ const getSalesByCategoryData = async () => {
 };
 
 // Get sales analytics for different time periods
-const getSalesAnalytics = async (period = "monthly") => {
+// Supports optional month (1-12) and year (e.g., 2025) to filter a specific month or year
+const getSalesAnalytics = async (period = "monthly", options = {}) => {
   try {
     const now = new Date();
     let startDate;
+    let endDate = now;
+    const month = options.month ? parseInt(options.month) : undefined; // 1-12
+    const year = options.year ? parseInt(options.year) : undefined; // YYYY
 
-    switch (period) {
-      case "daily":
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        break;
-      case "weekly":
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case "monthly":
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        break;
-      case "yearly":
-        startDate = new Date(now.getFullYear(), 0, 1);
-        break;
-      default:
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    // Compute date range with optional overrides
+    if (year && period === "yearly" && !month) {
+      startDate = new Date(year, 0, 1);
+      endDate = new Date(year, 11, 31, 23, 59, 59, 999);
+    } else if (year && month) {
+      // Specific month of a specific year
+      startDate = new Date(year, month - 1, 1);
+      endDate = new Date(year, month, 0, 23, 59, 59, 999); // last day of month
+    } else {
+      switch (period) {
+        case "daily":
+          startDate = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate()
+          );
+          break;
+        case "weekly":
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case "monthly":
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case "yearly":
+          startDate = new Date(now.getFullYear(), 0, 1);
+          break;
+        default:
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      }
     }
 
     // Get orders within the period
@@ -435,7 +453,7 @@ const getSalesAnalytics = async (period = "monthly") => {
       where: {
         createdAt: {
           gte: startDate,
-          lte: now,
+          lte: endDate,
         },
         // Include more statuses to get more data
         status: {
@@ -630,6 +648,9 @@ const getSalesAnalytics = async (period = "monthly") => {
       topCategories,
       topCustomers,
       topLocations,
+      selectedMonth:
+        month || (period === "monthly" ? now.getMonth() + 1 : null),
+      selectedYear: year || now.getFullYear(),
     };
   } catch (error) {
     console.error("Error fetching sales analytics:", error);

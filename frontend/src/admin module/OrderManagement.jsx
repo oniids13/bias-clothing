@@ -651,14 +651,61 @@ const OrderManagement = () => {
 
   // Status Update Modal Component
   const StatusUpdateModal = () => {
-    const [activeTab, setActiveTab] = useState("order"); // "order" or "payment"
-
     if (!showStatusModal || !updatingOrder) return null;
+
+    const hasNoChanges =
+      (newStatus || updatingOrder.status) === updatingOrder.status &&
+      (newPaymentStatus || updatingOrder.paymentStatus) ===
+        updatingOrder.paymentStatus;
+
+    const confirmUpdateBoth = async () => {
+      if (!updatingOrder) return;
+      try {
+        setStatusLoading(true);
+        let anyChange = false;
+        if (newStatus && newStatus !== updatingOrder.status) {
+          const res1 = await orderApi.updateOrderStatus(
+            updatingOrder.id,
+            newStatus
+          );
+          if (!res1.success)
+            throw new Error(res1.message || "Failed to update order status");
+          anyChange = true;
+        }
+        if (
+          newPaymentStatus &&
+          newPaymentStatus !== updatingOrder.paymentStatus
+        ) {
+          const res2 = await orderApi.updatePaymentStatus(
+            updatingOrder.id,
+            newPaymentStatus
+          );
+          if (!res2.success)
+            throw new Error(res2.message || "Failed to update payment status");
+          anyChange = true;
+        }
+        if (anyChange) {
+          setSuccessMessage(
+            `Order #${updatingOrder.orderNumber} updates saved successfully`
+          );
+          fetchOrders();
+        }
+        setShowStatusModal(false);
+        setUpdatingOrder(null);
+        setNewStatus("");
+        setNewPaymentStatus("");
+      } catch (err) {
+        console.error("Error updating order/payment:", err);
+        setError(err.message || "Failed to update order/payment");
+      } finally {
+        setStatusLoading(false);
+      }
+    };
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
-          <div className="flex items-center space-x-3 mb-4">
+          <div className="flex items-center space-x-3 mb-6">
             <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
               <EditIcon className="h-6 w-6 text-blue-600" />
             </div>
@@ -672,35 +719,11 @@ const OrderManagement = () => {
             </div>
           </div>
 
-          {/* Tabs */}
-          <div className="flex mb-6 border-b border-gray-200">
-            <button
-              onClick={() => setActiveTab("order")}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === "order"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Order Status
-            </button>
-            <button
-              onClick={() => setActiveTab("payment")}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === "payment"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Payment Status
-            </button>
-          </div>
-
-          {/* Order Status Tab */}
-          {activeTab === "order" && (
-            <div className="mb-6">
+          {/* Combined Form */}
+          <div className="space-y-6 mb-6">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select New Order Status
+                Order Status
               </label>
               <select
                 value={newStatus}
@@ -714,13 +737,10 @@ const OrderManagement = () => {
                 ))}
               </select>
             </div>
-          )}
 
-          {/* Payment Status Tab */}
-          {activeTab === "payment" && (
-            <div className="mb-6">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select New Payment Status
+                Payment Status
               </label>
               <select
                 value={newPaymentStatus}
@@ -734,7 +754,7 @@ const OrderManagement = () => {
                 ))}
               </select>
             </div>
-          )}
+          </div>
 
           <div className="flex space-x-3">
             <button
@@ -750,23 +770,14 @@ const OrderManagement = () => {
               Cancel
             </button>
             <button
-              onClick={
-                activeTab === "order"
-                  ? confirmStatusUpdate
-                  : confirmPaymentStatusUpdate
-              }
-              disabled={
-                statusLoading ||
-                (activeTab === "order" && newStatus === updatingOrder.status) ||
-                (activeTab === "payment" &&
-                  newPaymentStatus === updatingOrder.paymentStatus)
-              }
+              onClick={confirmUpdateBoth}
+              disabled={statusLoading || hasNoChanges}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center"
             >
               {statusLoading ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
               ) : (
-                `Update ${activeTab === "order" ? "Status" : "Payment Status"}`
+                "Save Changes"
               )}
             </button>
           </div>

@@ -433,9 +433,12 @@ const getCustomerStatsController = async (req, res) => {
 // Get sales analytics controller
 const getSalesAnalyticsController = async (req, res) => {
   try {
-    const { period = "monthly" } = req.query;
+    const { period = "monthly", month, year } = req.query;
 
-    const analyticsData = await getSalesAnalytics(period);
+    const analyticsData = await getSalesAnalytics(period, {
+      month,
+      year,
+    });
 
     res.status(200).json({
       success: true,
