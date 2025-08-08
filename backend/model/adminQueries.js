@@ -493,28 +493,42 @@ const getSalesAnalytics = async (period = "monthly", options = {}) => {
     });
 
     // Calculate analytics
-    const totalRevenue = orders.reduce((sum, order) => {
-      return (
-        sum +
-        order.items.reduce((orderSum, item) => {
-          return orderSum + item.product.price * item.quantity;
-        }, 0)
-      );
+    // Revenue should only include successful orders: DELIVERED + PAID
+    const successfulOrders = orders.filter(
+      (o) => o.status === "DELIVERED" && o.paymentStatus === "PAID"
+    );
+
+    const totalRevenue = successfulOrders.reduce((sum, order) => {
+      // Prefer stored order.total to stay consistent with dashboard
+      const orderTotal =
+        typeof order.total === "number"
+          ? order.total
+          : order.items.reduce(
+              (orderSum, item) => orderSum + item.product.price * item.quantity,
+              0
+            );
+      return sum + orderTotal;
     }, 0);
 
     const totalOrders = orders.length;
-    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    const averageOrderValue =
+      successfulOrders.length > 0 ? totalRevenue / successfulOrders.length : 0;
 
     // Group by date for trend
     const dailySales = {};
-    orders.forEach((order) => {
+    // Daily revenue should also reflect only successful orders (DELIVERED + PAID)
+    successfulOrders.forEach((order) => {
       const dateKey = order.createdAt.toISOString().split("T")[0];
       if (!dailySales[dateKey]) {
         dailySales[dateKey] = { revenue: 0, orders: 0 };
       }
-      const orderRevenue = order.items.reduce((sum, item) => {
-        return sum + item.product.price * item.quantity;
-      }, 0);
+      const orderRevenue =
+        typeof order.total === "number"
+          ? order.total
+          : order.items.reduce(
+              (sum, item) => sum + item.product.price * item.quantity,
+              0
+            );
       dailySales[dateKey].revenue += orderRevenue;
       dailySales[dateKey].orders += 1;
     });
