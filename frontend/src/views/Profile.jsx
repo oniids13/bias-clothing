@@ -553,6 +553,41 @@ const Profile = () => {
                                 Cancel Order
                               </button>
                             )}
+                            {order.status === "PENDING" &&
+                              order.paymentStatus === "PENDING" && (
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      const res =
+                                        await orderApi.reinitiatePayment(
+                                          order.id,
+                                          "gcash"
+                                        );
+                                      if (
+                                        res.success &&
+                                        res.data?.checkoutUrl
+                                      ) {
+                                        window.location.href =
+                                          res.data.checkoutUrl;
+                                      } else {
+                                        alert(
+                                          res.message ||
+                                            "Failed to start payment"
+                                        );
+                                      }
+                                    } catch (err) {
+                                      console.error(
+                                        "Reinitiate payment error:",
+                                        err
+                                      );
+                                      alert("Failed to start payment");
+                                    }
+                                  }}
+                                  className="text-green-600 hover:text-green-800 text-sm"
+                                >
+                                  Pay Again
+                                </button>
+                              )}
                           </div>
                         </div>
                       </div>

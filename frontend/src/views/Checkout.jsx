@@ -28,6 +28,7 @@ const Checkout = () => {
     city: "",
     zipCode: "",
     region: "",
+    makeDefault: false,
   });
 
   const [paymentOption, setPaymentOption] = useState("gcash");
@@ -327,7 +328,7 @@ const Checkout = () => {
           state: deliveryDetails.region,
           zipCode: deliveryDetails.zipCode,
           country: "Philippines",
-          isDefault: false, // Don't make this the default address
+          isDefault: Boolean(deliveryDetails.makeDefault),
         };
 
         console.log("Creating new address:", addressData);
@@ -339,7 +340,12 @@ const Checkout = () => {
           return;
         }
 
-        addressId = addressResponse.data.id;
+        const createdAddress = addressResponse.address || addressResponse.data;
+        if (!createdAddress || !createdAddress.id) {
+          setError("Address saved but response was missing the address ID");
+          return;
+        }
+        addressId = createdAddress.id;
       }
 
       // Calculate totals
@@ -421,9 +427,10 @@ const Checkout = () => {
         customerEmail: contactInfo.email,
         orderNumber: createdOrder.orderNumber || `ORD-${Date.now()}`,
         items: orderData.items,
-        cancelUrl: `${window.location.origin}/checkout?cancelled=true`,
-        successUrl: `${window.location.origin}/checkout?success=true&order_id=${createdOrderId}`,
+        cancelUrl: `http://localhost:3000/api/order/payment/redirect?status=cancelled&order_id=${createdOrderId}`,
+        successUrl: `http://localhost:3000/api/order/payment/redirect?success=true&order_id=${createdOrderId}`,
         paymentMethods: [paymentOption],
+        orderId: createdOrderId,
       };
 
       console.log("Creating checkout session:", checkoutSessionData);
@@ -725,6 +732,21 @@ const Checkout = () => {
                     required
                   />
                 </div>
+                {/* Make default checkbox */}
+                {!deliveryDetails.useSavedAddress && (
+                  <label className="flex items-center space-x-2 pt-2">
+                    <input
+                      type="checkbox"
+                      name="makeDefault"
+                      checked={deliveryDetails.makeDefault}
+                      onChange={handleDeliveryDetailsChange}
+                      className="w-4 h-4 text-black bg-gray-100 border-gray-300 rounded focus:ring-black"
+                    />
+                    <span className="text-sm text-gray-700">
+                      Make this my default address
+                    </span>
+                  </label>
+                )}
               </div>
             </div>
 

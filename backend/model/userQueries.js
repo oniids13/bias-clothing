@@ -216,6 +216,17 @@ const deleteAddress = async (addressId, userId) => {
       throw new Error("Address not found or does not belong to user");
     }
 
+    // Prevent deletion if address is referenced by any orders (required relation)
+    const addressUsedCount = await prisma.order.count({
+      where: { addressId: addressId },
+    });
+    if (addressUsedCount > 0) {
+      throw new Error(
+        "This address is linked to existing orders and cannot be deleted. Please keep it for order history or add a new address and set it as default."
+      );
+    }
+
+    // Safe to delete
     const address = await prisma.address.delete({
       where: { id: addressId },
     });

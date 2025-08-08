@@ -485,6 +485,28 @@ const cancelOrder = async (orderId) => {
   }
 };
 
+const reinitiatePayment = async (orderId, paymentMethod = "gcash") => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/order/${orderId}/reinitiate-payment`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ paymentMethod }),
+      }
+    );
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error reinitiating payment:", error);
+    return { success: false, message: error.message };
+  }
+};
+
 export const orderApi = {
   createAddress,
   createOrder,
@@ -508,4 +530,5 @@ export const orderApi = {
   updateOrderStatus,
   updatePaymentStatus,
   generateInvoice,
+  reinitiatePayment,
 };

@@ -30,7 +30,98 @@ import {
   attachPaymentMethod,
   createCheckoutSession,
   getCheckoutSession,
+  getSource,
 } from "../services/paymongo.js";
+
+// Redirect helper for PayMongo return URLs (success/failed/expired)
+const paymentRedirectController = (req, res) => {
+  try {
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const {
+      success,
+      status,
+      order_id: orderId,
+      source_id: sourceId,
+      checkout_session_id: checkoutSessionId,
+      reason,
+    } = req.query;
+
+    const params = new URLSearchParams();
+
+    // Treat explicit success flag as success, otherwise any non-success becomes cancelled
+    if (success === "true" || status === "success") {
+      params.set("success", "true");
+      if (orderId) params.set("order_id", orderId);
+      if (checkoutSessionId)
+        params.set("checkout_session_id", checkoutSessionId);
+    } else {
+      params.set("cancelled", "true");
+      if (orderId) params.set("order_id", orderId);
+      if (status) params.set("status", status); // e.g., failed, expired, canceled
+      if (reason) params.set("reason", reason);
+      if (sourceId) params.set("source_id", sourceId);
+    }
+
+    const redirectUrl = `${clientUrl}/checkout?${params.toString()}`;
+    return res.redirect(302, redirectUrl);
+  } catch (error) {
+    console.error("paymentRedirectController error:", error);
+    // Fallback: send a minimal HTML with client-side redirect
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    return res
+      .status(302)
+      .send(
+        `<html><head><meta http-equiv="refresh" content="0;url='${clientUrl}/checkout?cancelled=true'" /></head><body>Redirecting...</body></html>`
+      );
+  }
+};
+
+// Handle PayMongo Source redirect by source id
+const paymentSourceRedirectController = async (req, res) => {
+  try {
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const { id } = req.query; // PayMongo Source ID, e.g., src_XXXX
+
+    if (!id) {
+      return res.redirect(
+        302,
+        `${clientUrl}/checkout?cancelled=true&reason=missing_source_id`
+      );
+    }
+
+    const sourceResp = await getSource(id);
+    if (!sourceResp.success) {
+      return res.redirect(
+        302,
+        `${clientUrl}/checkout?cancelled=true&status=failed&reason=source_lookup_failed`
+      );
+    }
+
+    const source = sourceResp.data;
+    const status = source.attributes?.status; // pending | chargeable | canceled | expired | failed
+    const metadata = source.attributes?.metadata || {};
+    const orderId = metadata.order_id || metadata.orderId || "";
+
+    const params = new URLSearchParams();
+    if (status === "chargeable") {
+      params.set("success", "true");
+    } else {
+      params.set("cancelled", "true");
+      if (status) params.set("status", status);
+    }
+    if (orderId) params.set("order_id", orderId);
+    params.set("source_id", id);
+
+    return res.redirect(302, `${clientUrl}/checkout?${params.toString()}`);
+  } catch (error) {
+    console.error("paymentSourceRedirectController error:", error);
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    return res.redirect(
+      302,
+      `${clientUrl}/checkout?cancelled=true&reason=internal_error`
+    );
+  }
+};
 
 // ============================================
 // ORDER CONTROLLERS
@@ -1363,6 +1454,102 @@ const createCheckoutSessionController = async (req, res) => {
   }
 };
 
+// Re-initiate payment for an existing order (user-owned) by creating a new checkout session
+const reinitiatePaymentForOrderController = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { paymentMethod = "gcash" } = req.body; // "gcash" or "card"
+
+    if (!orderId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Order ID is required" });
+    }
+
+    // Fetch the order and validate ownership and status
+    const order = await getOrderById(orderId);
+    if (!order) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found" });
+    }
+
+    // Require auth and ensure current user owns the order
+    const currentUserId = req.user?.id;
+    if (!currentUserId || order.userId !== currentUserId) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only pay for your own orders",
+      });
+    }
+
+    // Only allow re-payment on PENDING orders
+    if (order.status !== "PENDING") {
+      return res.status(400).json({
+        success: false,
+        message: "Only pending orders can be paid again",
+      });
+    }
+
+    // Prepare items for checkout
+    const items = (order.items || []).map((item) => ({
+      productId: item.productId,
+      productName: item.productName,
+      size: item.size,
+      color: item.color,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+    }));
+
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+
+    const checkoutSessionData = {
+      total: order.total,
+      customerName: order.user?.name || "Customer",
+      customerEmail: order.user?.email || "customer@example.com",
+      orderNumber: order.orderNumber,
+      items,
+      cancelUrl: `${
+        process.env.SERVER_URL || "http://localhost:3000"
+      }/api/order/payment/redirect?status=cancelled&order_id=${order.id}`,
+      successUrl: `${
+        process.env.SERVER_URL || "http://localhost:3000"
+      }/api/order/payment/redirect?success=true&order_id=${order.id}`,
+      paymentMethods: [paymentMethod],
+    };
+
+    const checkoutSessionResponse = await createCheckoutSession(
+      checkoutSessionData
+    );
+    if (!checkoutSessionResponse.success) {
+      return res.status(400).json({
+        success: false,
+        message: "Failed to create checkout session",
+        error: checkoutSessionResponse.error,
+      });
+    }
+
+    const checkoutSessionId = checkoutSessionResponse.data.id;
+    const checkoutUrl = checkoutSessionResponse.data.attributes.checkout_url;
+
+    // Update order payment fields
+    await updatePaymentStatus(order.id, "PENDING", checkoutSessionId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Checkout session created successfully",
+      data: { checkoutUrl, checkoutSessionId },
+    });
+  } catch (error) {
+    console.error("Reinitiate payment error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to reinitiate payment",
+      error: error.message,
+    });
+  }
+};
+
 // Retrieve Checkout Session
 const getCheckoutSessionController = async (req, res) => {
   try {
@@ -1507,4 +1694,11 @@ export {
 
   // Invoice generation
   generateInvoiceController,
+
+  // Redirect helpers
+  paymentRedirectController,
+  paymentSourceRedirectController,
+
+  // Re-payment
+  reinitiatePaymentForOrderController,
 };

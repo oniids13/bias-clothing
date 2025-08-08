@@ -33,6 +33,11 @@ import {
   attachPaymentMethodController,
   createCheckoutSessionController,
   getCheckoutSessionController,
+
+  // Redirect controller helpers
+  paymentRedirectController,
+  paymentSourceRedirectController,
+  reinitiatePaymentForOrderController,
 } from "../controller/orderController.js";
 
 import { requireAuth } from "../middleware/auth.js";
@@ -151,5 +156,24 @@ router.post("/payment/success", handlePaymentSuccessController);
 
 // Handle Payment Success (Protected version for frontend callbacks)
 router.post("/payment/confirm", requireAuth, handlePaymentSuccessController);
+
+// Unified redirect endpoint for PayMongo (success/failed/expired)
+// Example usage from PayMongo redirect settings:
+//   success:  GET /api/order/payment/redirect?success=true&order_id={ORDER_ID}
+//   failed:   GET /api/order/payment/redirect?status=failed&order_id={ORDER_ID}
+//   expired:  GET /api/order/payment/redirect?status=expired&order_id={ORDER_ID}
+router.get("/payment/redirect", paymentRedirectController);
+
+// Redirect endpoint that accepts PayMongo Source ID and bounces user back
+// Configure PayMongo (sources redirect failed/success) to this endpoint:
+//   GET /api/order/payment/source-redirect?id={SOURCE_ID}
+router.get("/payment/source-redirect", paymentSourceRedirectController);
+
+// Re-initiate payment for an existing order (user must be authenticated and owner)
+router.post(
+  "/:orderId/reinitiate-payment",
+  requireAuth,
+  reinitiatePaymentForOrderController
+);
 
 export default router;

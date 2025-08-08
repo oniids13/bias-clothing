@@ -353,3 +353,33 @@ export const getCheckoutSession = async (checkoutSessionId) => {
     };
   }
 };
+
+// Retrieve Source (used by gcash and other redirect flows)
+export const getSource = async (sourceId) => {
+  try {
+    const response = await fetch(`${PAYMONGO_BASE_URL}/sources/${sourceId}`, {
+      method: "GET",
+      headers: {
+        Authorization: getAuthHeader(),
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("PayMongo API Error:", data);
+      throw new Error(data.errors?.[0]?.detail || "Failed to retrieve source");
+    }
+
+    return {
+      success: true,
+      data: data.data,
+    };
+  } catch (error) {
+    console.error("Error retrieving source:", error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+};
