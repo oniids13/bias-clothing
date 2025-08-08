@@ -634,6 +634,25 @@ const getSalesAnalytics = async (period = "monthly", options = {}) => {
       .sort((a, b) => b.totalRevenue - a.totalRevenue)
       .slice(0, 10);
 
+    // Successful orders this month (Delivered & Paid)
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999
+    );
+    const successfulOrdersThisMonth = await prisma.order.count({
+      where: {
+        createdAt: { gte: monthStart, lte: monthEnd },
+        status: "DELIVERED",
+        paymentStatus: "PAID",
+      },
+    });
+
     return {
       period,
       totalRevenue,
@@ -648,6 +667,7 @@ const getSalesAnalytics = async (period = "monthly", options = {}) => {
       topCategories,
       topCustomers,
       topLocations,
+      successfulOrdersThisMonth,
       selectedMonth:
         month || (period === "monthly" ? now.getMonth() + 1 : null),
       selectedYear: year || now.getFullYear(),

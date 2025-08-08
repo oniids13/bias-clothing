@@ -15,6 +15,7 @@ import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import AssessmentIcon from "@mui/icons-material/Assessment";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 
 const SalesAnalytics = () => {
   const navigate = useNavigate();
@@ -29,6 +30,7 @@ const SalesAnalytics = () => {
     topCategories: [],
     topCustomers: [],
     topLocations: [],
+    successfulOrdersThisMonth: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -306,6 +308,26 @@ const SalesAnalytics = () => {
               </div>
               <div className="bg-blue-100 p-2 sm:p-3 rounded-full ml-3">
                 <ShoppingCartIcon className="text-blue-500 text-lg sm:text-xl lg:text-2xl" />
+              </div>
+            </div>
+          </div>
+
+          {/* Successful Orders (Delivered & Paid) - This Month */}
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium text-gray-600">
+                  Successful Orders (This Month)
+                </p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">
+                  {analyticsData.successfulOrdersThisMonth || 0}
+                </p>
+                <p className="text-xs sm:text-sm text-gray-500 mt-2">
+                  Status: Delivered • Payment: Paid
+                </p>
+              </div>
+              <div className="bg-green-100 p-2 sm:p-3 rounded-full ml-3">
+                <CheckCircleIcon className="text-green-500 text-lg sm:text-xl lg:text-2xl" />
               </div>
             </div>
           </div>
