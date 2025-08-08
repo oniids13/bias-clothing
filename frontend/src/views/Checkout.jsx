@@ -398,16 +398,32 @@ const Checkout = () => {
     try {
       console.log("Processing PayMongo hosted checkout...");
 
-      // Create Checkout Session
+      // 1) Create order FIRST to get the orderId
+      const orderResponse = await orderApi.createOrder({
+        ...orderData,
+        paymentStatus: "PENDING",
+      });
+
+      if (!orderResponse.success) {
+        throw new Error(orderResponse.message || "Failed to create order");
+      }
+
+      const createdOrder = orderResponse.data;
+      const createdOrderId = createdOrder?.id;
+      if (!createdOrderId) {
+        throw new Error("Order created but no order ID returned");
+      }
+
+      // 2) Create Checkout Session with success URL that includes the order ID
       const checkoutSessionData = {
         total: orderData.total,
         customerName: contactInfo.fullName,
         customerEmail: contactInfo.email,
-        orderNumber: `ORD-${Date.now()}`, // Generate a temporary order number
+        orderNumber: createdOrder.orderNumber || `ORD-${Date.now()}`,
         items: orderData.items,
         cancelUrl: `${window.location.origin}/checkout?cancelled=true`,
-        successUrl: `${window.location.origin}/checkout?success=true&order_id=${orderData.userId}`,
-        paymentMethods: [paymentOption], // Only the selected payment method
+        successUrl: `${window.location.origin}/checkout?success=true&order_id=${createdOrderId}`,
+        paymentMethods: [paymentOption],
       };
 
       console.log("Creating checkout session:", checkoutSessionData);
@@ -416,7 +432,6 @@ const Checkout = () => {
         checkoutSessionData
       );
       console.log("Checkout Session Response:", checkoutResponse);
-      console.log("Checkout Response Data:", checkoutResponse.data);
 
       if (!checkoutResponse.success) {
         throw new Error(
@@ -424,32 +439,39 @@ const Checkout = () => {
         );
       }
 
-      const { checkoutUrl } = checkoutResponse.data;
-      console.log("Extracted checkout URL:", checkoutUrl);
-
+      const { checkoutUrl, checkoutSessionId } = checkoutResponse.data;
       if (!checkoutUrl) {
-        console.error("No checkout URL received from PayMongo!");
         console.error(
-          "Full response:",
-          JSON.stringify(checkoutResponse, null, 2)
+          "No checkout URL received from PayMongo!",
+          checkoutResponse
         );
         throw new Error("No checkout URL received from PayMongo");
       }
 
-      // Create order in our database first
-      const orderResponse = await orderApi.createOrder({
-        ...orderData,
-        paymentStatus: "PENDING",
-        paymentIntentId: checkoutResponse.data.checkoutSessionId,
-      });
-
-      if (!orderResponse.success) {
-        throw new Error(orderResponse.message || "Failed to create order");
+      // 3) Optionally associate the checkout session ID to the order (as paymentIntentId)
+      try {
+        await fetch(
+          `http://localhost:3000/api/order/${createdOrderId}/payment`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              paymentStatus: "PENDING",
+              paymentIntentId: checkoutSessionId,
+            }),
+          }
+        );
+      } catch (assocErr) {
+        console.warn(
+          "Failed to associate checkout session to order:",
+          assocErr
+        );
       }
 
       console.log("Order created, redirecting to PayMongo checkout...");
 
-      // Redirect to PayMongo hosted checkout
+      // 4) Redirect to PayMongo hosted checkout
       window.location.href = checkoutUrl;
     } catch (error) {
       console.error("PayMongo hosted checkout error:", error);

@@ -357,6 +357,16 @@ const updatePaymentStatusController = async (req, res) => {
       paymentIntentId
     );
 
+    // Also set order status to CONFIRMED when payment is PAID
+    if (paymentStatus === "PAID") {
+      try {
+        await updateOrderStatus(orderId, "CONFIRMED");
+      } catch (statusErr) {
+        // Log but don't fail the request if status update fails
+        console.warn("Failed to set order status to CONFIRMED:", statusErr);
+      }
+    }
+
     res.status(200).json({
       success: true,
       message: "Payment status updated successfully",
