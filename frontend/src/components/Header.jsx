@@ -163,8 +163,8 @@ const Header = ({ user, setUser }) => {
 
   return (
     <>
-      <header className="p-10 relative">
-        <div className="flex justify-between items-center">
+      <header className="p-10 relative bg-black text-white">
+        <div className="flex justify-evenly items-center">
           <Link to="/">
             <img className="w-30" src="/src/images/bias_logo.png" alt="logo" />
           </Link>
@@ -233,7 +233,7 @@ const Header = ({ user, setUser }) => {
 
         {/* Small Mobile Dropdown Menu */}
         {isMenuOpen && (
-          <div className="absolute top-full right-4 bg-white shadow-lg border rounded-lg md:hidden z-40 w-48">
+          <div className="absolute top-full right-4 bg-black shadow-lg border rounded-lg md:hidden z-40 w-48">
             <nav className="flex flex-col p-3 space-y-2">
               <Link
                 to="/"
