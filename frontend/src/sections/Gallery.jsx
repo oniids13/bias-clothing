@@ -124,7 +124,7 @@ const Gallery = () => {
               className="gallery-track flex transition-transform duration-500 ease-in-out"
               style={{
                 transform: `translateX(-${
-                  currentIndex * (100 / itemsPerView)
+                  gallery.length ? currentIndex * (100 / gallery.length) : 0
                 }%)`,
                 width: `${(gallery.length / itemsPerView) * 100}%`,
               }}
@@ -133,7 +133,10 @@ const Gallery = () => {
                 <div
                   key={item.id || index}
                   className="gallery-item flex-shrink-0 px-3"
-                  style={{ width: `${100 / gallery.length}%` }}
+                  style={{
+                    width: `${100 / gallery.length}%`,
+                    boxSizing: "border-box",
+                  }}
                 >
                   <div className="group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 bg-white">
                     <div className="aspect-[4/5] overflow-hidden">
