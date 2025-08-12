@@ -163,21 +163,36 @@ const Header = ({ user, setUser }) => {
 
   return (
     <>
-      <header className="p-10 relative bg-black text-white">
+      <header className="p-10 relative bg-black text-white  ">
         <div className="flex justify-evenly items-center">
           <Link to="/">
             <img className="w-30" src="/src/images/bias_logo.png" alt="logo" />
           </Link>
 
           {/* Desktop Navigation - Hidden on mobile */}
-          <div className="hidden md:flex gap-10 font-bold">
-            <Link to="/">Home</Link>
-            <Link to="/about">About</Link>
-            <Link to="/shop">Shop</Link>
+          <div className="hidden md:flex gap-10 font-bold  ">
+            <Link
+              className="relative px-1 py-0.5 text-white/90 hover:text-sky-300 transition-colors duration-200 after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-gradient-to-r after:from-sky-400 after:to-cyan-300 after:transition-[width] after:duration-300 hover:after:w-full"
+              to="/"
+            >
+              Home
+            </Link>
+            <Link
+              className="relative px-1 py-0.5 text-white/90 hover:text-sky-300 transition-colors duration-200 after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-gradient-to-r after:from-sky-400 after:to-cyan-300 after:transition-[width] after:duration-300 hover:after:w-full"
+              to="/about"
+            >
+              About
+            </Link>
+            <Link
+              className="relative px-1 py-0.5 text-white/90 hover:text-sky-300 transition-colors duration-200 after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-gradient-to-r after:from-sky-400 after:to-cyan-300 after:transition-[width] after:duration-300 hover:after:w-full"
+              to="/shop"
+            >
+              Shop
+            </Link>
             {user && user.role === "ADMIN" && (
               <Link
                 to="/admin"
-                className="text-blue-600 hover:text-blue-700 transition-colors"
+                className="relative px-1 py-0.5 text-white/90 hover:text-sky-300 transition-colors duration-200 after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-gradient-to-r after:from-sky-400 after:to-cyan-300 after:transition-[width] after:duration-300 hover:after:w-full"
                 title="Admin Dashboard"
               >
                 Admin
@@ -187,14 +202,18 @@ const Header = ({ user, setUser }) => {
 
           {/* Desktop Cart and User - Hidden on mobile */}
           <div className="hidden md:flex items-center gap-4">
-            <Link to="/cart" className="inline-block">
+            <Link
+              to="/cart"
+              className="relative inline-block text-white/90 hover:text-sky-300 transition-colors duration-200 after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-gradient-to-r after:from-sky-400 after:to-cyan-300 after:transition-[width] after:duration-300 hover:after:w-full"
+              title="Cart"
+            >
               <CartIconWithBadge />
             </Link>
             {user ? (
               <>
                 <Link
                   to="/profile"
-                  className="inline-block"
+                  className="relative inline-block text-white/90 hover:text-sky-300 transition-colors duration-200 after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-gradient-to-r after:from-sky-400 after:to-cyan-300 after:transition-[width] after:duration-300 hover:after:w-full"
                   title={`Profile - ${user.name}`}
                 >
                   {user.avatar ? (
@@ -215,7 +234,12 @@ const Header = ({ user, setUser }) => {
                 </button>
               </>
             ) : (
-              <button onClick={logInPage} disabled={isLoading}>
+              <button
+                onClick={logInPage}
+                disabled={isLoading}
+                className="relative inline-flex items-center text-white/90 hover:text-sky-300 transition-colors duration-200 after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-gradient-to-r after:from-sky-400 after:to-cyan-300 after:transition-[width] after:duration-300 hover:after:w-full"
+                title="Login"
+              >
                 <AccountCircleIcon />
               </button>
             )}
