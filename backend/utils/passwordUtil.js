@@ -1,23 +1,26 @@
 import crypto from "crypto";
 
-function validPassword(password, hash, salt) {
-  var hashVerify = crypto
-    .pbkdf2Sync(password, salt, 10000, 64, "sha512")
-    .toString("hex");
+const ITERATIONS_NEW = 310000;
+const ITERATIONS_OLD = 10000;
 
-  return hash === hashVerify;
+function pbkdf2Hex(password, salt, iterations) {
+  return crypto
+    .pbkdf2Sync(password, salt, iterations, 64, "sha512")
+    .toString("hex");
+}
+
+function validPassword(password, hash, salt) {
+  // Try new iterations first, then fall back for backward compatibility
+  const newHash = pbkdf2Hex(password, salt, ITERATIONS_NEW);
+  if (hash === newHash) return true;
+  const oldHash = pbkdf2Hex(password, salt, ITERATIONS_OLD);
+  return hash === oldHash;
 }
 
 function genPassword(password) {
-  var salt = crypto.randomBytes(32).toString("hex");
-  var genHash = crypto
-    .pbkdf2Sync(password, salt, 10000, 64, "sha512")
-    .toString("hex");
-
-  return {
-    salt: salt,
-    hash: genHash,
-  };
+  const salt = crypto.randomBytes(32).toString("hex");
+  const genHash = pbkdf2Hex(password, salt, ITERATIONS_NEW);
+  return { salt, hash: genHash };
 }
 
 export { validPassword, genPassword };

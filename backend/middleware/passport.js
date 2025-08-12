@@ -14,11 +14,19 @@ passport.serializeUser((user, done) => {
   done(null, user.id);
 });
 
-// Deserialize user from the session
+// Deserialize user from the session (return only safe fields)
 passport.deserializeUser(async (id, done) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatar: true,
+        role: true,
+        createdAt: true,
+      },
     });
     done(null, user);
   } catch (error) {
@@ -111,6 +119,7 @@ passport.use(
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: process.env.GOOGLE_CALLBACK_URL || "/auth/google/callback",
+      state: true,
       scope: ["profile", "email"],
     },
     async (accessToken, refreshToken, profile, done) => {
