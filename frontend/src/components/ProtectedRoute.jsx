@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../App";
+import { authFetch } from "../services/httpClient";
 import Unauthorized from "../views/Unauthorized";
 
 const ProtectedRoute = ({ children }) => {
@@ -19,19 +20,10 @@ const ProtectedRoute = ({ children }) => {
 
   const checkUserAuth = async () => {
     try {
-      const response = await fetch("http://localhost:3000/auth/user", {
-        credentials: "include",
-        cache: "no-cache",
-        headers: {
-          "Cache-Control": "no-cache",
-          Pragma: "no-cache",
-        },
-      });
-
-      if (response.ok) {
-        const userData = await response.json();
+      try {
+        const userData = await authFetch(`/user`, { method: "GET" });
         setUser(userData);
-      } else {
+      } catch (e) {
         setUser(null);
       }
     } catch (error) {
@@ -115,19 +107,10 @@ export const AdminProtectedRoute = ({ children }) => {
 
   const checkUserAuth = async () => {
     try {
-      const response = await fetch("http://localhost:3000/auth/user", {
-        credentials: "include",
-        cache: "no-cache",
-        headers: {
-          "Cache-Control": "no-cache",
-          Pragma: "no-cache",
-        },
-      });
-
-      if (response.ok) {
-        const userData = await response.json();
+      try {
+        const userData = await authFetch(`/user`, { method: "GET" });
         setUser(userData);
-      } else {
+      } catch (e) {
         setUser(null);
       }
     } catch (error) {

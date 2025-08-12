@@ -34,8 +34,16 @@ const Shop = () => {
 
       // Fetch both active and inactive products
       const [activeResponse, inactiveResponse] = await Promise.all([
-        fetch("http://localhost:3000/api/product/active"),
-        fetch("http://localhost:3000/api/product/inactive"),
+        fetch(
+          `${
+            import.meta.env.VITE_API_URL || "http://localhost:3000"
+          }/api/product/active`
+        ),
+        fetch(
+          `${
+            import.meta.env.VITE_API_URL || "http://localhost:3000"
+          }/api/product/inactive`
+        ),
       ]);
 
       const [activeData, inactiveData] = await Promise.all([

@@ -2,6 +2,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import { Outlet, useLocation } from "react-router-dom";
 import { useState, createContext, useContext, useEffect } from "react";
+import { AUTH_BASE_URL } from "./services/httpClient";
 
 // Create authentication context
 const AuthContext = createContext();
@@ -32,7 +33,7 @@ function App() {
 
         // Check authentication status after Google OAuth
         try {
-          const response = await fetch("http://localhost:3000/auth/user", {
+          const response = await fetch(`${AUTH_BASE_URL}/user`, {
             credentials: "include",
             cache: "no-cache",
             headers: {

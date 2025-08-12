@@ -132,9 +132,14 @@ const Profile = () => {
   const fetchUserProfile = async () => {
     try {
       setLoading(true);
-      const response = await fetch("http://localhost:3000/api/user/profile", {
-        credentials: "include",
-      });
+      const response = await fetch(
+        `${
+          import.meta.env.VITE_API_URL || "http://localhost:3000"
+        }/api/user/profile`,
+        {
+          credentials: "include",
+        }
+      );
 
       if (response.ok) {
         const data = await response.json();
@@ -154,14 +159,19 @@ const Profile = () => {
   const handlePhoneUpdate = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch("http://localhost:3000/api/user/phone", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({ phone: phoneForm }),
-      });
+      const response = await fetch(
+        `${
+          import.meta.env.VITE_API_URL || "http://localhost:3000"
+        }/api/user/phone`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({ phone: phoneForm }),
+        }
+      );
 
       if (response.ok) {
         const data = await response.json();
@@ -184,8 +194,12 @@ const Profile = () => {
     e.preventDefault();
     try {
       const url = editingAddress
-        ? `http://localhost:3000/api/user/address/${editingAddress.id}`
-        : "http://localhost:3000/api/user/address";
+        ? `${
+            import.meta.env.VITE_API_URL || "http://localhost:3000"
+          }/api/user/address/${editingAddress.id}`
+        : `${
+            import.meta.env.VITE_API_URL || "http://localhost:3000"
+          }/api/user/address`;
 
       const method = editingAddress ? "PUT" : "POST";
 
@@ -232,7 +246,9 @@ const Profile = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:3000/api/user/address/${addressId}`,
+        `${
+          import.meta.env.VITE_API_URL || "http://localhost:3000"
+        }/api/user/address/${addressId}`,
         {
           method: "DELETE",
           credentials: "include",
@@ -256,7 +272,9 @@ const Profile = () => {
   const handleSetDefaultAddress = async (addressId) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/api/user/address/${addressId}/default`,
+        `${
+          import.meta.env.VITE_API_URL || "http://localhost:3000"
+        }/api/user/address/${addressId}/default`,
         {
           method: "PUT",
           credentials: "include",

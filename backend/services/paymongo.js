@@ -3,6 +3,7 @@ dotenv.config();
 
 const PAYMONGO_SECRET_KEY = process.env.PAYMONGO_SECRET_KEY;
 const PAYMONGO_BASE_URL = "https://api.paymongo.com/v1";
+const SERVER_URL = process.env.SERVER_URL || "http://localhost:3000";
 
 if (!PAYMONGO_SECRET_KEY) {
   throw new Error("PAYMONGO_SECRET_KEY is required in environment variables");
@@ -259,6 +260,28 @@ export const createCheckoutSession = async (orderData) => {
       metadata.order_id = String(orderData.orderId);
     }
 
+    const toAbsoluteUrl = (url) => {
+      try {
+        if (!url) return null;
+        if (/^https?:\/\//i.test(url)) return url;
+        const path = url.startsWith("/") ? url : `/${url}`;
+        return `${SERVER_URL}${path}`;
+      } catch (_) {
+        return null;
+      }
+    };
+
+    const cancelUrlAbs =
+      toAbsoluteUrl(orderData.cancelUrl) ||
+      `${
+        process.env.CLIENT_URL || "http://localhost:5173"
+      }/checkout?cancelled=true`;
+    const successUrlAbs =
+      toAbsoluteUrl(orderData.successUrl) ||
+      `${
+        process.env.CLIENT_URL || "http://localhost:5173"
+      }/checkout?success=true`;
+
     const checkoutSessionData = {
       data: {
         attributes: {
@@ -269,12 +292,8 @@ export const createCheckoutSession = async (orderData) => {
           send_email_receipt: true,
           show_description: true,
           show_line_items: true,
-          cancel_url:
-            orderData.cancelUrl ||
-            "http://localhost:5173/checkout?cancelled=true",
-          success_url:
-            orderData.successUrl ||
-            "http://localhost:5173/checkout?success=true",
+          cancel_url: cancelUrlAbs,
+          success_url: successUrlAbs,
           line_items: lineItems,
           payment_method_types: orderData.paymentMethods || ["card", "gcash"],
           description: `Order ${orderData.orderNumber} - ${orderData.customerName}`,

@@ -1,23 +1,11 @@
-const API_BASE_URL = "http://localhost:3000/api";
+import { apiFetch } from "./httpClient";
 
 // Admin API service for fetching admin dashboard data
 export const adminApi = {
   // Get complete admin dashboard statistics with growth data
   getCompleteAdminStats: async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/stats`, {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch admin statistics");
-      }
+      const data = await apiFetch(`/admin/stats`, { method: "GET" });
 
       return {
         success: true,
@@ -45,19 +33,7 @@ export const adminApi = {
   // Get dashboard analytics for charts
   getDashboardAnalytics: async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/analytics`, {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch dashboard analytics");
-      }
+      const data = await apiFetch(`/admin/analytics`, { method: "GET" });
 
       return {
         success: true,
@@ -81,19 +57,7 @@ export const adminApi = {
   // Get admin dashboard statistics
   getAdminStats: async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/stats`, {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch admin statistics");
-      }
+      const data = await apiFetch(`/admin/stats`, { method: "GET" });
 
       return {
         success: true,
@@ -111,19 +75,7 @@ export const adminApi = {
   // Get total number of registered users (excluding admins)
   getTotalUsers: async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/users/count`, {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch user count");
-      }
+      const data = await apiFetch(`/admin/users/count`, { method: "GET" });
 
       return {
         success: true,
@@ -143,19 +95,7 @@ export const adminApi = {
   // Get total number of products
   getTotalProducts: async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/products/count`, {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch product count");
-      }
+      const data = await apiFetch(`/admin/products/count`, { method: "GET" });
 
       return {
         success: true,
@@ -183,22 +123,9 @@ export const adminApi = {
         queryParams.append("isActive", options.isActive);
       if (options.search) queryParams.append("search", options.search);
 
-      const response = await fetch(
-        `${API_BASE_URL}/admin/products?${queryParams}`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch products");
-      }
+      const data = await apiFetch(`/admin/products?${queryParams}`, {
+        method: "GET",
+      });
 
       return {
         success: true,
@@ -230,22 +157,9 @@ export const adminApi = {
         queryParams.append("startDate", dateRange.startDate);
       if (dateRange.endDate) queryParams.append("endDate", dateRange.endDate);
 
-      const response = await fetch(
-        `${API_BASE_URL}/order/admin/stats?${queryParams}`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch order statistics");
-      }
+      const data = await apiFetch(`/order/admin/stats?${queryParams}`, {
+        method: "GET",
+      });
 
       return {
         success: true,
@@ -269,22 +183,9 @@ export const adminApi = {
   // Get recent activity for admin dashboard
   getRecentActivity: async (limit = 10) => {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/admin/activity?limit=${limit}`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch recent activity");
-      }
+      const data = await apiFetch(`/admin/activity?limit=${limit}`, {
+        method: "GET",
+      });
 
       return {
         success: true,
@@ -303,22 +204,9 @@ export const adminApi = {
   // Get low stock items
   getLowStockItems: async (threshold = 5) => {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/order/admin/low-stock?threshold=${threshold}`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch low stock items");
-      }
+      const data = await apiFetch(`/order/stock/low?threshold=${threshold}`, {
+        method: "GET",
+      });
 
       return {
         success: true,
@@ -347,22 +235,9 @@ export const adminApi = {
       if (role) queryParams.append("role", role);
       if (search) queryParams.append("search", search);
 
-      const response = await fetch(
-        `${API_BASE_URL}/admin/users?${queryParams}`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch users");
-      }
+      const data = await apiFetch(`/admin/users?${queryParams}`, {
+        method: "GET",
+      });
 
       return {
         success: true,
@@ -392,22 +267,9 @@ export const adminApi = {
       if (status) queryParams.append("status", status);
       if (search) queryParams.append("search", search);
 
-      const response = await fetch(
-        `${API_BASE_URL}/order/admin/orders?${queryParams}`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch orders");
-      }
+      const data = await apiFetch(`/order/admin/all?${queryParams}`, {
+        method: "GET",
+      });
 
       return {
         success: true,
@@ -428,20 +290,10 @@ export const adminApi = {
   // Update order status
   updateOrderStatus: async (orderId, status, adminNotes = "") => {
     try {
-      const response = await fetch(`${API_BASE_URL}/order/${orderId}/status`, {
+      const data = await apiFetch(`/order/${orderId}/status`, {
         method: "PUT",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status, adminNotes }),
+        body: { status, adminNotes },
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to update order status");
-      }
 
       return {
         success: true,
@@ -459,19 +311,7 @@ export const adminApi = {
   // Delete/Cancel order
   cancelOrder: async (orderId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/order/${orderId}`, {
-        method: "DELETE",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to cancel order");
-      }
+      const data = await apiFetch(`/order/${orderId}`, { method: "DELETE" });
 
       return {
         success: true,
@@ -491,20 +331,10 @@ export const adminApi = {
   // Create a new product
   createProduct: async (productData) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/products`, {
+      const data = await apiFetch(`/admin/products`, {
         method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(productData),
+        body: productData,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to create product");
-      }
 
       return {
         success: true,
@@ -523,22 +353,9 @@ export const adminApi = {
   // Get single product for editing
   getProductById: async (productId) => {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/admin/products/${productId}`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch product");
-      }
+      const data = await apiFetch(`/admin/products/${productId}`, {
+        method: "GET",
+      });
 
       return {
         success: true,
@@ -557,23 +374,10 @@ export const adminApi = {
   // Update an existing product
   updateProduct: async (productId, productData) => {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/admin/products/${productId}`,
-        {
-          method: "PUT",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(productData),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to update product");
-      }
+      const data = await apiFetch(`/admin/products/${productId}`, {
+        method: "PUT",
+        body: productData,
+      });
 
       return {
         success: true,
@@ -592,22 +396,9 @@ export const adminApi = {
   // Delete a product
   deleteProduct: async (productId) => {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/admin/products/${productId}`,
-        {
-          method: "DELETE",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to delete product");
-      }
+      const data = await apiFetch(`/admin/products/${productId}`, {
+        method: "DELETE",
+      });
 
       return {
         success: true,
@@ -629,7 +420,7 @@ export const adminApi = {
       const formData = new FormData();
       formData.append("images", imageFile);
 
-      const response = await fetch(`${API_BASE_URL}/admin/upload-image`, {
+      const response = await fetch(`/api/admin/upload-image`, {
         method: "POST",
         credentials: "include",
         body: formData, // Don't set Content-Type header, let browser set it
@@ -637,7 +428,7 @@ export const adminApi = {
 
       const data = await response.json();
 
-      if (!response.ok) {
+      if (!response.ok || data.success === false) {
         throw new Error(data.message || "Failed to upload image");
       }
 
@@ -665,7 +456,7 @@ export const adminApi = {
         formData.append("images", file);
       });
 
-      const response = await fetch(`${API_BASE_URL}/admin/upload-image`, {
+      const response = await fetch(`/api/admin/upload-image`, {
         method: "POST",
         credentials: "include",
         body: formData,
@@ -673,7 +464,7 @@ export const adminApi = {
 
       const data = await response.json();
 
-      if (!response.ok) {
+      if (!response.ok || data.success === false) {
         throw new Error(data.message || "Failed to upload images");
       }
 
@@ -694,19 +485,7 @@ export const adminApi = {
   // Get inventory data for inventory management
   getInventoryData: async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/inventory`, {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch inventory data");
-      }
+      const data = await apiFetch(`/admin/inventory`, { method: "GET" });
 
       return {
         success: true,
@@ -734,26 +513,10 @@ export const adminApi = {
   // Update variant stock level
   updateVariantStock: async (variantId, stock, notes = "") => {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/admin/inventory/variant/${variantId}`,
-        {
-          method: "PUT",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            stock,
-            notes,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to update stock");
-      }
+      const data = await apiFetch(`/admin/inventory/variant/${variantId}`, {
+        method: "PUT",
+        body: { stock, notes },
+      });
 
       return {
         success: true,
@@ -772,22 +535,9 @@ export const adminApi = {
   // Get inventory analytics
   getInventoryAnalytics: async () => {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/admin/inventory/analytics`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch inventory analytics");
-      }
+      const data = await apiFetch(`/admin/inventory/analytics`, {
+        method: "GET",
+      });
 
       return {
         success: true,
@@ -815,22 +565,10 @@ export const adminApi = {
       if (month) params.append("month", String(month));
       if (year) params.append("year", String(year));
 
-      const response = await fetch(
-        `${API_BASE_URL}/admin/sales/analytics?${params.toString()}`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+      const data = await apiFetch(
+        `/admin/sales/analytics?${params.toString()}`,
+        { method: "GET" }
       );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch sales analytics");
-      }
 
       return {
         success: true,
@@ -864,22 +602,9 @@ export const adminApi = {
       if (options.limit) queryParams.append("limit", options.limit);
       if (options.search) queryParams.append("search", options.search);
 
-      const response = await fetch(
-        `${API_BASE_URL}/admin/customers?${queryParams}`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch customers");
-      }
+      const data = await apiFetch(`/admin/customers?${queryParams}`, {
+        method: "GET",
+      });
 
       return {
         success: true,
@@ -899,22 +624,9 @@ export const adminApi = {
 
   getCustomerDetails: async (customerId) => {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/admin/customers/${customerId}`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch customer details");
-      }
+      const data = await apiFetch(`/admin/customers/${customerId}`, {
+        method: "GET",
+      });
 
       return {
         success: true,
@@ -932,22 +644,9 @@ export const adminApi = {
 
   deleteCustomer: async (customerId) => {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/admin/customers/${customerId}`,
-        {
-          method: "DELETE",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to delete customer");
-      }
+      const data = await apiFetch(`/admin/customers/${customerId}`, {
+        method: "DELETE",
+      });
 
       return {
         success: true,
@@ -964,19 +663,7 @@ export const adminApi = {
 
   getCustomerStats: async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/customers/stats`, {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch customer stats");
-      }
+      const data = await apiFetch(`/admin/customers/stats`, { method: "GET" });
 
       return {
         success: true,

@@ -100,20 +100,25 @@ const Register = () => {
     setSuccessMessage("");
 
     try {
-      const response = await fetch("http://localhost:3000/api/user/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phone: formData.contactNumber,
-          password: formData.password,
-        }),
-      });
+      const response = await fetch(
+        `${
+          import.meta.env.VITE_API_URL || "http://localhost:3000"
+        }/api/user/register`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phone: formData.contactNumber,
+            password: formData.password,
+          }),
+        }
+      );
 
       const data = await response.json();
 
@@ -197,7 +202,9 @@ const Register = () => {
 
   const handleGoogleRegister = () => {
     // Redirect to Google OAuth endpoint
-    window.location.href = "http://localhost:3000/auth/google";
+    window.location.href = `${
+      import.meta.env.VITE_API_URL || "http://localhost:3000"
+    }/auth/google`;
   };
 
   return (

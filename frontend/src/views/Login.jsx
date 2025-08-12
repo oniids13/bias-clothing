@@ -24,8 +24,9 @@ const Login = () => {
   const navigate = useNavigate();
   const { setUser } = useAuth();
 
-  const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:3000/auth/google";
+  const handleGoogleLogin = async () => {
+    const { AUTH_BASE_URL } = await import("../services/httpClient");
+    window.location.href = `${AUTH_BASE_URL}/google`;
   };
 
   const handleLocalLogin = async (e) => {
@@ -33,12 +34,17 @@ const Login = () => {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("http://localhost:3000/api/user/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await fetch(
+        `${
+          import.meta.env.VITE_API_URL || "http://localhost:3000"
+        }/api/user/login`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ email, password }),
+        }
+      );
       const data = await response.json();
       if (response.ok && data.success) {
         setUser(data.user);
@@ -94,7 +100,9 @@ const Login = () => {
 
     try {
       const response = await fetch(
-        "http://localhost:3000/api/user/forgot-password",
+        `${
+          import.meta.env.VITE_API_URL || "http://localhost:3000"
+        }/api/user/forgot-password`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

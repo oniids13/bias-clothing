@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../App";
 import { cartApi } from "../services/cartApi";
 import { orderApi } from "../services/orderApi";
+import { apiFetch } from "../services/httpClient";
 import { useNavigate } from "react-router-dom";
 
 const Checkout = () => {
@@ -70,12 +71,10 @@ const Checkout = () => {
       const orderId = urlParams.get("order_id");
       if (orderId) {
         try {
-          // Update payment status to PAID
-          await fetch(`http://localhost:3000/api/order/${orderId}/payment`, {
+          // Update payment status to PAID (uses same-origin proxy)
+          await apiFetch(`/order/${orderId}/payment`, {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ paymentStatus: "PAID" }),
+            body: { paymentStatus: "PAID" },
           });
         } catch (err) {
           console.error("Failed to update payment status:", err);
@@ -139,7 +138,7 @@ const Checkout = () => {
 
   const fetchUserDefaultAddress = async () => {
     try {
-      const response = await fetch("http://localhost:3000/api/user/profile", {
+      const response = await fetch(`/api/user/profile`, {
         credentials: "include",
       });
 
@@ -284,12 +283,9 @@ const Checkout = () => {
       if (deliveryDetails.useSavedAddress) {
         // If using saved address, we need to get the user's default address
         try {
-          const userResponse = await fetch(
-            "http://localhost:3000/api/user/profile",
-            {
-              credentials: "include",
-            }
-          );
+          const userResponse = await fetch(`/api/user/profile`, {
+            credentials: "include",
+          });
 
           if (userResponse.ok) {
             const userData = await userResponse.json();
@@ -427,8 +423,8 @@ const Checkout = () => {
         customerEmail: contactInfo.email,
         orderNumber: createdOrder.orderNumber || `ORD-${Date.now()}`,
         items: orderData.items,
-        cancelUrl: `http://localhost:3000/api/order/payment/redirect?status=cancelled&order_id=${createdOrderId}`,
-        successUrl: `http://localhost:3000/api/order/payment/redirect?success=true&order_id=${createdOrderId}`,
+        cancelUrl: `/api/order/payment/redirect?status=cancelled&order_id=${createdOrderId}`,
+        successUrl: `/api/order/payment/redirect?success=true&order_id=${createdOrderId}`,
         paymentMethods: [paymentOption],
         orderId: createdOrderId,
       };
@@ -457,18 +453,13 @@ const Checkout = () => {
 
       // 3) Optionally associate the checkout session ID to the order (as paymentIntentId)
       try {
-        await fetch(
-          `http://localhost:3000/api/order/${createdOrderId}/payment`,
-          {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({
-              paymentStatus: "PENDING",
-              paymentIntentId: checkoutSessionId,
-            }),
-          }
-        );
+        await apiFetch(`/order/${createdOrderId}/payment`, {
+          method: "PATCH",
+          body: {
+            paymentStatus: "PENDING",
+            paymentIntentId: checkoutSessionId,
+          },
+        });
       } catch (assocErr) {
         console.warn(
           "Failed to associate checkout session to order:",

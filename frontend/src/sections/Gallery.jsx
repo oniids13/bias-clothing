@@ -9,7 +9,11 @@ const Gallery = () => {
   useEffect(() => {
     const fetchGallery = async () => {
       try {
-        const response = await fetch("http://localhost:3000/api/gallery");
+        const response = await fetch(
+          `${
+            import.meta.env.VITE_API_URL || "http://localhost:3000"
+          }/api/gallery`
+        );
         const data = await response.json();
         setGallery(data);
       } catch (error) {

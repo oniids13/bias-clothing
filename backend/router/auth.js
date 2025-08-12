@@ -6,7 +6,7 @@ const router = express.Router();
 // Google OAuth login route (with state)
 router.get(
   "/google",
-  passport.authenticate("google", { scope: ["profile", "email"], state: true })
+  passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
 // Google OAuth callback route with session fixation protection

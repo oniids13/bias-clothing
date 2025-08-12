@@ -10,6 +10,8 @@ import csurf from "csurf";
 import RedisStore from "connect-redis";
 import { createClient as createRedisClient } from "redis";
 import { cleanEnv, str, bool } from "envalid";
+import path from "path";
+import { fileURLToPath } from "url";
 
 // routes
 import authRoutes from "./router/auth.js";
@@ -99,6 +101,10 @@ if (env.REDIS_URL) {
   }
 }
 
+const isProd = env.NODE_ENV === "production";
+// Dev: keep SameSite=Lax (same-origin via Vite proxy). Prod: Lax by default.
+// Override via COOKIE_SAMESITE if you deploy cross-site and need None.
+const cookieSameSite = process.env.COOKIE_SAMESITE || (isProd ? "lax" : "lax");
 app.use(
   session({
     name: "sid",
@@ -108,8 +114,8 @@ app.use(
     store: redisClient ? new RedisStore({ client: redisClient }) : undefined,
     cookie: {
       httpOnly: true,
-      sameSite: "lax",
-      secure: env.NODE_ENV === "production",
+      sameSite: cookieSameSite,
+      secure: isProd && cookieSameSite !== "lax" ? true : false,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
   })
@@ -143,6 +149,21 @@ app.get("/", (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
+
+// In production, serve frontend and enable SPA fallback for client routes
+if (process.env.NODE_ENV === "production") {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const distPath = path.resolve(__dirname, "../frontend/dist");
+
+  // Serve static assets
+  app.use(express.static(distPath));
+
+  // SPA fallback – exclude API and auth routes
+  app.get(/^(?!\/(api|auth)\b).*/, (req, res) => {
+    res.sendFile(path.join(distPath, "index.html"));
+  });
+}
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

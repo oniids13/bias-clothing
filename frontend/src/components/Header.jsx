@@ -5,6 +5,7 @@ import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import { cartApi } from "../services/cartApi";
+import { AUTH_BASE_URL, authFetch } from "../services/httpClient";
 
 import LogoCover from "./LogoCover";
 
@@ -72,19 +73,10 @@ const Header = ({ user, setUser }) => {
 
   const checkUserAuth = async () => {
     try {
-      const response = await fetch("http://localhost:3000/auth/user", {
-        credentials: "include",
-        cache: "no-cache", // Prevent caching
-        headers: {
-          "Cache-Control": "no-cache",
-          Pragma: "no-cache",
-        },
-      });
-
-      if (response.ok) {
-        const userData = await response.json();
+      try {
+        const userData = await authFetch(`/user`, { method: "GET" });
         setUser(userData);
-      } else {
+      } catch (e) {
         setUser(null);
       }
     } catch (error) {
@@ -117,22 +109,13 @@ const Header = ({ user, setUser }) => {
   };
 
   const googleLogin = () => {
-    window.location.href = "http://localhost:3000/auth/google";
+    window.location.href = `${AUTH_BASE_URL}/google`;
   };
 
   const handleLogout = async () => {
     try {
-      const response = await fetch("http://localhost:3000/auth/logout", {
-        method: "POST",
-        credentials: "include",
-        cache: "no-cache",
-        headers: {
-          "Cache-Control": "no-cache",
-          Pragma: "no-cache",
-        },
-      });
-
-      if (response.ok) {
+      try {
+        await authFetch(`/logout`, { method: "POST" });
         setUser(null);
         setCartItemCount(0);
         closeMenu();
@@ -140,6 +123,11 @@ const Header = ({ user, setUser }) => {
         setTimeout(() => {
           checkUserAuth();
         }, 100);
+        navigate("/");
+      } catch (e) {
+        // swallow and still clear local state
+        setUser(null);
+        setCartItemCount(0);
         navigate("/");
       }
     } catch (error) {

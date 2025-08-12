@@ -14,7 +14,9 @@ const Display = ({ title, endpoint }) => {
         setError(null);
 
         const response = await fetch(
-          `http://localhost:3000/api/product/${endpoint}`
+          `${
+            import.meta.env.VITE_API_URL || "http://localhost:3000"
+          }/api/product/${endpoint}`
         );
         const data = await response.json();
 
