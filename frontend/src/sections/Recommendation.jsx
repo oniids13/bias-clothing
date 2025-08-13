@@ -1,26 +1,33 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import ProductCard from "../components/ProductCard";
 
 const Recommendation = () => {
   const [products, setProducts] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(
+    window.innerWidth >= 1280
+      ? 3
+      : window.innerWidth >= 1024
+      ? 3
+      : window.innerWidth >= 768
+      ? 2
+      : 2
+  );
 
-  // Number of products to show per view on different screen sizes
-  const getProductsPerView = () => {
-    if (window.innerWidth >= 1024) return 4; // Desktop
-    if (window.innerWidth >= 768) return 3; // Tablet
-    return 2; // Mobile
-  };
-
-  const [productsPerView, setProductsPerView] = useState(getProductsPerView());
-
+  // Track breakpoint for responsive carousel
   useEffect(() => {
     const handleResize = () => {
-      setProductsPerView(getProductsPerView());
-      // Reset to first slide when screen size changes
-      setCurrentIndex(0);
+      const perPage =
+        window.innerWidth >= 1280
+          ? 3
+          : window.innerWidth >= 1024
+          ? 3
+          : window.innerWidth >= 768
+          ? 2
+          : 2;
+      setItemsPerPage(perPage);
+      setCurrentPage(0);
     };
-
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -53,22 +60,35 @@ const Recommendation = () => {
     fetchProducts();
   }, []);
 
-  const nextSlide = () => {
-    setCurrentIndex((prev) =>
-      prev + productsPerView >= products.length ? 0 : prev + productsPerView
-    );
-  };
+  // Build pages for responsive carousel
+  const pages = useMemo(() => {
+    const chunkSize = itemsPerPage;
+    const pages = [];
+    for (let i = 0; i < products.length; i += chunkSize) {
+      pages.push(products.slice(i, i + chunkSize));
+    }
+    return pages;
+  }, [products, itemsPerPage]);
 
-  const prevSlide = () => {
-    setCurrentIndex((prev) =>
-      prev === 0
-        ? Math.max(0, products.length - productsPerView)
-        : Math.max(0, prev - productsPerView)
-    );
-  };
+  const totalPages = pages.length;
+  const canSlide = totalPages > 1;
 
-  const canGoNext = currentIndex + productsPerView < products.length;
-  const canGoPrev = currentIndex > 0;
+  const next = () =>
+    setCurrentPage((p) => (totalPages ? (p + 1) % totalPages : 0));
+  const prev = () =>
+    setCurrentPage((p) => (totalPages ? (p - 1 + totalPages) % totalPages : 0));
+
+  // Dynamic grid classes based on itemsPerPage
+  const getGridClass = () => {
+    switch (itemsPerPage) {
+      case 2:
+        return "grid-cols-2";
+      case 3:
+        return "grid-cols-3";
+      default:
+        return "grid-cols-2";
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 text-center">
@@ -76,48 +96,46 @@ const Recommendation = () => {
         You might also like
       </h2>
 
-      <div className="relative px-8">
-        {/* Carousel Container */}
-        <div className="overflow-hidden">
+      <div className="relative max-w-7xl mx-auto">
+        {/* Responsive manual carousel with arrows on all breakpoints */}
+        <div className="overflow-hidden mx-12">
           <div
             className="flex transition-transform duration-500 ease-in-out"
             style={{
-              transform: `translateX(-${
-                (currentIndex * 100) / productsPerView
-              }%)`,
-              width: `${(products.length * 100) / productsPerView}%`,
+              transform: `translateX(-${currentPage * 100}%)`,
             }}
           >
-            {products.map((product, index) => (
-              <div
-                key={product.id || index}
-                className="flex-shrink-0 px-2"
-                style={{ width: `${100 / products.length}%` }}
-              >
-                <ProductCard product={product} />
+            {pages.map((page, pageIdx) => (
+              <div key={`page-${pageIdx}`} className="w-full flex-shrink-0">
+                <div className={`grid ${getGridClass()} gap-8 px-6`}>
+                  {page.map((p, idx) => (
+                    <div
+                      key={p.id || `${pageIdx}-${idx}`}
+                      className="flex justify-center"
+                    >
+                      <div className="w-full max-w-xs">
+                        <ProductCard product={p} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Navigation Arrows */}
-        {products.length > productsPerView && (
+        {canSlide && (
           <>
             <button
-              onClick={prevSlide}
-              className={`absolute left-0 top-1/2 transform -translate-y-1/2 bg-white rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 z-10 ${
-                !canGoPrev
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-gray-50"
-              }`}
-              aria-label="Previous products"
-              disabled={!canGoPrev}
+              aria-label="Previous"
+              onClick={prev}
+              className="absolute left-0 top-1/2 -translate-y-1/2 bg-white rounded-full p-3 shadow-lg hover:shadow-xl z-10 border"
             >
               <svg
-                className="w-6 h-6 text-gray-600"
+                className="w-5 h-5"
+                viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                viewBox="0 0 24 24"
               >
                 <path
                   strokeLinecap="round"
@@ -127,22 +145,16 @@ const Recommendation = () => {
                 />
               </svg>
             </button>
-
             <button
-              onClick={nextSlide}
-              className={`absolute right-0 top-1/2 transform -translate-y-1/2 bg-white rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 z-10 ${
-                !canGoNext
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-gray-50"
-              }`}
-              aria-label="Next products"
-              disabled={!canGoNext}
+              aria-label="Next"
+              onClick={next}
+              className="absolute right-0 top-1/2 -translate-y-1/2 bg-white rounded-full p-3 shadow-lg hover:shadow-xl z-10 border"
             >
               <svg
-                className="w-6 h-6 text-gray-600"
+                className="w-5 h-5"
+                viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                viewBox="0 0 24 24"
               >
                 <path
                   strokeLinecap="round"
