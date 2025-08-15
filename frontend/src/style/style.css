@@ -45,3 +45,21 @@ html {
   border: 3px solid #fff;
   cursor: pointer;
 }
+
+@media (max-width: 768px) {
+  .btn-cover {
+    width: 30%;
+    height: 15%;
+    top: 70%;
+    left: 35%;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .btn-cover {
+    width: 30%;
+    height: 15%;
+    top: 70%;
+    left: 35%;
+  }
+}
